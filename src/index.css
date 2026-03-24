@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+@layer base {
+  /* Fixed header (contact strip + nav): keep section titles visible on in-page links */
+  :root {
+    --header-offset: 11rem;
+  }
+  @media (min-width: 768px) {
+    :root {
+      --header-offset: 12.5rem;
+    }
+  }
+  html {
+    scroll-padding-top: var(--header-offset);
+  }
+}
+
+@theme {
+  --font-sans: "Outfit", system-ui, sans-serif;
+  --font-serif: "Cormorant Garamond", Georgia, serif;
+  --color-cream: #FBF8F3;
+  --color-sand: #E8E0D5;
+  --color-gold: #B8860B;
+  --color-rose: #C9A9A6;
+  --color-charcoal: #2C2826;
+  --color-warm: #5C534E;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

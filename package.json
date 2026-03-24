@@ -1,0 +1,19 @@
+{
+  "name": "best-nails",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --hot ./server.ts",
+    "build": "bun build ./index.html --minify --outdir=dist",
+    "start": "bun ./server.ts",
+    "preview": "bun run dist/index.html"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "bun-plugin-tailwind": "latest",
+    "tailwindcss": "^4.0.0"
+  }
+}

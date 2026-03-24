@@ -1,0 +1,128 @@
+{
+  "site": {
+    "title": "Distinctive Nails — Luxury Nail Care & Art",
+    "description": "Luxurious nail care and nail art in a welcoming space. Book your manicure, pedicure, or nail art appointment today.",
+    "logoUrl": "/uploads/ce0a1630-4a95-4d46-b42f-8aa389689a6c.png",
+    "brandName": "Distinctive Nails",
+    "phone": "+1 843-688-5605",
+    "phoneTel": "+1 843-688-5605",
+    "email": "hello@bestnails.com",
+    "address": "1915 State Road Unit D, Summerville, SC, United States, 29486",
+    "footerTagline": "Luxury nail care in a friendly space.",
+    "bookingUrl": "https://bookingnail.com"
+  },
+  "hero": {
+    "eyebrow": "Luxury meets comfort 2",
+    "title": "Your nails deserve the best",
+    "subtitle": "Expert manicures, pedicures, and nail art in a welcoming space. We use premium products and take time to make you feel pampered.",
+    "imageUrl": "/uploads/21740680-c37b-4e56-8615-8481fd5f1e87.jpg"
+  },
+  "aboutSlider": {
+    "label": "About us",
+    "heading": "Best Nails - Noi dep sang trong va than thien",
+    "paragraph1": "Chung toi tin rang moi buoi lam nail khong chi la lam dep, ma con la khoang thoi gian de ban thu gian va yeu chieu ban than. Best Nails ket hop khong gian tinh te, quy trinh sach se, va doi ngu ky thuat vien tan tam de mang den trai nghiem tron ven.",
+    "paragraph2": "Tu manicure, pedicure den nail art cao cap, moi chi tiet deu duoc cham chut ky luong de ban luon tu tin voi bo nail cua minh."
+  },
+  "slides": [
+    {
+      "imageUrl": "/uploads/52f836ac-77dc-4b1d-ad92-19068d79f542.jpg",
+      "description": "Khong gian tiep khach sang trong cua salon",
+      "alt": "Khong gian tiep khach sang trong cua salon"
+    },
+    {
+      "imageUrl": "/uploads/b7749549-18aa-4284-b711-70ffeb1aa451.jpg",
+      "description": "Goc lam nail voi anh sang am",
+      "alt": "Goc lam nail voi anh sang am"
+    }
+  ],
+  "pricing": {
+    "modalSubtitle": "Price Menu",
+    "modalTitle": "Service Menu",
+    "services": [
+      {
+        "name": "Manicure",
+        "description": "",
+        "items": [
+          {
+            "name": "Classic Manicure",
+            "price": "$23",
+            "description": "Nature nails care, cuticle detail, nails cut, shaped, buffing, and hand massages & finished with polish of your choice."
+          },
+          {
+            "name": "With Gel Polish",
+            "price": "$38",
+            "description": ""
+          },
+          {
+            "name": "Deluxe Manicure",
+            "price": "$33",
+            "description": "An upgrade of classic manicure, plus Aromatic mink mask wrapped with Hot Towel & moisturizing Paraffin to soften your hand with a clear, warm glow."
+          },
+          {
+            "name": "Signature Manicure",
+            "price": "$43",
+            "description": "A truly manicure your hand pampered! All the luxury the Deluxe Manicure, plus tangerine sea salt will rejuvenate your skin naturals, healthy glow. Topped with Hot Stone treatment massage."
+          }
+        ]
+      },
+      {
+        "name": "Pedicure",
+        "description": "",
+        "items": [
+          {
+            "name": "Classic Pedicure",
+            "price": "$30",
+            "description": "Soak, scrub, cuticle care and polish."
+          },
+          {
+            "name": "Deluxe Pedicure",
+            "price": "$45",
+            "description": "Extended exfoliation, masque and massage for deeper relaxation."
+          }
+        ]
+      }
+    ]
+  },
+  "promotion": {
+    "enabled": false,
+    "title": "Grand Opening - 20% OFF",
+    "imageUrl": "/uploads/0529e6a7-bbaf-4548-8284-7a023402799b.jpg",
+    "description": "Enjoy 20% OFF for all manicure and pedicure services this month."
+  },
+  "testimonial": {
+    "label": "What clients say",
+    "heading": "Kind words",
+    "quote": "Best Nails feels like a treat every time. The team is so warm and the results are always perfect. I won't go anywhere else.",
+    "author": "Maria K.",
+    "role": "Regular client"
+  },
+  "instagram": {
+    "profileUrl": "https://www.instagram.com/nailsbynikkitran/",
+    "images": [
+      {
+        "imageUrl": "/uploads/647e0ec3-d7dd-45e8-b98d-0086ffd7140d.jpg",
+        "alt": "c63208139186005.622b0a6dce31a"
+      },
+      {
+        "imageUrl": "/uploads/4ce2316b-d56a-484e-af13-b39ef36c16bb.jpg",
+        "alt": "649253050_10236678072863966_7777405686174417641_n"
+      },
+      {
+        "imageUrl": "/uploads/cc69f123-a251-4fea-93fd-af1ef0808344.jpg",
+        "alt": "305456644_591076952692671_740277528764013171_n"
+      }
+    ],
+    "enabledAutoFeed": true,
+    "username": "bestnails_salon",
+    "appId": "1648863669644352",
+    "appSecret": "212a29910d1327db03ab1580a8a8d752",
+    "redirectUri": "http://127.0.0.1:3000/api/instagram/callback",
+    "accessToken": "",
+    "connectedAt": "",
+    "limit": 6,
+    "tokenType": "",
+    "userId": "",
+    "expiresIn": 0,
+    "embedCode": "<!-- Elfsight Instagram Feed | Untitled Instagram Feed -->\n<script src=\"https://elfsightcdn.com/platform.js\" async></script>\n<div class=\"elfsight-app-eb6c5cfd-6a93-4ba9-a286-c51aacd01f4d\" data-elfsight-app-lazy></div>"
+  }
+}
