@@ -786,56 +786,65 @@ export default function AdminApp() {
                   />
                 </Field>
 
-                <div className="space-y-3">
-                  {(service.items || []).map((item, itemIndex) => (
-                    <div key={itemIndex} className="rounded-xl border border-sand/50 p-3 space-y-2 relative">
-                      <button
-                        type="button"
-                        onClick={() => removePriceItemFromService(serviceIndex, itemIndex)}
-                        className="absolute top-2 right-2 text-xs text-red-700 hover:underline cursor-pointer"
+                <div className="mt-1 ml-2 sm:ml-4 pl-4 sm:pl-5 border-l-[3px] border-rose/35 rounded-r-lg bg-cream/60 py-4 pr-3 space-y-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-warm/90">
+                    Mục giá trong nhóm này
+                  </p>
+                  <div className="space-y-3">
+                    {(service.items || []).map((item, itemIndex) => (
+                      <div
+                        key={itemIndex}
+                        className="rounded-xl border border-sand/60 bg-white p-3 pl-4 space-y-2 relative shadow-sm"
                       >
-                        Xóa item
-                      </button>
-                      <Field label="Tên item">
-                        <input
-                          className="w-full rounded-xl border border-sand px-4 py-2.5"
-                          value={item.name}
-                          onChange={(e) =>
-                            setPriceItemByService(serviceIndex, itemIndex, { name: e.target.value })
-                          }
-                        />
-                      </Field>
-                      <Field label="Giá">
-                        <input
-                          className="w-full rounded-xl border border-sand px-4 py-2.5"
-                          value={item.price}
-                          onChange={(e) =>
-                            setPriceItemByService(serviceIndex, itemIndex, { price: e.target.value })
-                          }
-                        />
-                      </Field>
-                      <Field label="Mô tả item (tuỳ chọn)">
-                        <textarea
-                          className="w-full rounded-xl border border-sand px-4 py-2.5 min-h-[60px]"
-                          value={item.description}
-                          onChange={(e) =>
-                            setPriceItemByService(serviceIndex, itemIndex, {
-                              description: e.target.value,
-                            })
-                          }
-                        />
-                      </Field>
-                    </div>
-                  ))}
-                </div>
+                        <span className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-rose/25" aria-hidden />
+                        <button
+                          type="button"
+                          onClick={() => removePriceItemFromService(serviceIndex, itemIndex)}
+                          className="absolute top-2 right-2 text-xs text-red-700 hover:underline cursor-pointer"
+                        >
+                          Xóa item
+                        </button>
+                        <Field label={`Item ${itemIndex + 1} — Tên`}>
+                          <input
+                            className="w-full rounded-xl border border-sand px-4 py-2.5"
+                            value={item.name}
+                            onChange={(e) =>
+                              setPriceItemByService(serviceIndex, itemIndex, { name: e.target.value })
+                            }
+                          />
+                        </Field>
+                        <Field label="Giá">
+                          <input
+                            className="w-full rounded-xl border border-sand px-4 py-2.5"
+                            value={item.price}
+                            onChange={(e) =>
+                              setPriceItemByService(serviceIndex, itemIndex, { price: e.target.value })
+                            }
+                          />
+                        </Field>
+                        <Field label="Mô tả item (tuỳ chọn)">
+                          <textarea
+                            className="w-full rounded-xl border border-sand px-4 py-2.5 min-h-[60px]"
+                            value={item.description}
+                            onChange={(e) =>
+                              setPriceItemByService(serviceIndex, itemIndex, {
+                                description: e.target.value,
+                              })
+                            }
+                          />
+                        </Field>
+                      </div>
+                    ))}
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={() => addPriceItemToService(serviceIndex)}
-                  className="rounded-full border border-charcoal px-4 py-2 text-sm hover:bg-cream cursor-pointer"
-                >
-                  + Thêm item cho service này
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => addPriceItemToService(serviceIndex)}
+                    className="rounded-full border border-charcoal/30 bg-white px-4 py-2 text-sm text-charcoal hover:bg-cream cursor-pointer"
+                  >
+                    + Thêm item trong nhóm
+                  </button>
+                </div>
               </div>
             ))}
           </div>
