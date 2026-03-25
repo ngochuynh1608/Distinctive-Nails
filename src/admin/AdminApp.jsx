@@ -24,6 +24,25 @@ const emptyPriceService = () => ({
   groups: [emptyPriceGroup()],
 });
 
+function normalizeHero(h) {
+  if (!h || typeof h !== "object") {
+    return {
+      eyebrow: "",
+      title: "",
+      subtitle: "",
+      imageUrl: "",
+      imageUrlDesktop: "",
+      imageUrlMobile: "",
+    };
+  }
+  return {
+    ...h,
+    imageUrl: String(h.imageUrl ?? "").trim(),
+    imageUrlDesktop: String(h.imageUrlDesktop ?? "").trim(),
+    imageUrlMobile: String(h.imageUrlMobile ?? "").trim(),
+  };
+}
+
 function normalizePricingData(p) {
   let pricing = p;
   if (!Array.isArray(p?.services)) {
@@ -146,6 +165,7 @@ export default function AdminApp() {
       const j = await r.json();
       setDraft({
         ...j,
+        hero: normalizeHero(j.hero),
         pricing: normalizePricingData(j.pricing || {}),
       });
     } catch (e) {
@@ -853,29 +873,64 @@ export default function AdminApp() {
               onChange={(e) => setHero({ subtitle: e.target.value })}
             />
           </Field>
-          <Field label="Ảnh nền hero (URL hoặc upload)">
+          <p className="text-xs text-warm leading-relaxed">
+            Desktop từ 768px trở lên; mobile từ 767px trở xuống. Để trống mobile sẽ dùng ảnh desktop. Nếu
+            chưa điền desktop, site vẫn dùng ảnh hero đã lưu trước đó (một ảnh chung).
+          </p>
+          <Field label="Ảnh hero — Desktop (URL hoặc upload)">
             <div className="flex flex-col sm:flex-row gap-2">
               <input
                 className="flex-1 rounded-xl border border-sand px-4 py-2.5"
-                value={draft.hero.imageUrl}
-                onChange={(e) => setHero({ imageUrl: e.target.value })}
+                value={draft.hero.imageUrlDesktop}
+                onChange={(e) => setHero({ imageUrlDesktop: e.target.value })}
+                placeholder={draft.hero.imageUrl || "https://…"}
               />
               <FilePickerButton
-                id="upload-hero"
-                label="Choose image"
+                id="upload-hero-desktop"
+                label="Upload desktop"
                 onPick={async (files) => {
                   const f = files[0];
                   if (!f) return;
                   try {
                     const url = await uploadFile(f);
-                    setHero({ imageUrl: url });
+                    setHero({ imageUrlDesktop: url });
                   } catch (err) {
                     alert(err.message);
                   }
                 }}
               />
             </div>
-            <ImageThumb src={draft.hero.imageUrl} alt="Hero image preview" />
+            <ImageThumb
+              src={draft.hero.imageUrlDesktop || draft.hero.imageUrl}
+              alt="Hero desktop preview"
+            />
+          </Field>
+          <Field label="Ảnh hero — Mobile (URL hoặc upload)">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                className="flex-1 rounded-xl border border-sand px-4 py-2.5"
+                value={draft.hero.imageUrlMobile}
+                onChange={(e) => setHero({ imageUrlMobile: e.target.value })}
+              />
+              <FilePickerButton
+                id="upload-hero-mobile"
+                label="Upload mobile"
+                onPick={async (files) => {
+                  const f = files[0];
+                  if (!f) return;
+                  try {
+                    const url = await uploadFile(f);
+                    setHero({ imageUrlMobile: url });
+                  } catch (err) {
+                    alert(err.message);
+                  }
+                }}
+              />
+            </div>
+            <ImageThumb
+              src={draft.hero.imageUrlMobile || draft.hero.imageUrlDesktop || draft.hero.imageUrl}
+              alt="Hero mobile preview"
+            />
           </Field>
         </section>
 

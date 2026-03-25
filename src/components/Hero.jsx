@@ -20,14 +20,21 @@ export default function Hero() {
   const hero = content.hero;
   const bookingUrl = content.site?.bookingUrl?.trim() || "#book";
 
+  const legacy = (hero.imageUrl || "").trim();
+  const desktopSrc = (hero.imageUrlDesktop || "").trim() || legacy;
+  const mobileSrc = (hero.imageUrlMobile || "").trim() || desktopSrc;
+
   return (
     <section className="relative min-h-[85vh] flex flex-col justify-center px-4 md:px-8 overflow-hidden">
       <div className="absolute inset-0" aria-hidden="true">
-        <img
-          src={hero.imageUrl}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover"
-        />
+        <picture className="absolute inset-0 block">
+          <source media="(max-width: 767px)" srcSet={mobileSrc} />
+          <img
+            src={desktopSrc}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        </picture>
       </div>
       {HERO_VIDEO_URL && (
         <div className="absolute inset-0" aria-hidden="true">
