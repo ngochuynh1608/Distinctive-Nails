@@ -54,7 +54,7 @@ export default function Services() {
             </div>
           </div>
 
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-2">
+          <div className="mt-3 flex flex-wrap gap-2">
             {(pricing.services || []).map((service, idx) => {
               const label = service?.name || `Service ${idx + 1}`;
               const isActive = idx === activeServiceIndex;
@@ -63,7 +63,7 @@ export default function Services() {
                   key={`${label}-${idx}`}
                   type="button"
                   onClick={() => setActiveServiceIndex(idx)}
-                  className={`shrink-0 rounded-full border px-4 py-2 text-sm whitespace-nowrap transition-colors cursor-pointer ${
+                  className={`rounded-full border px-4 py-2 text-sm whitespace-nowrap transition-colors cursor-pointer ${
                     isActive
                       ? "bg-charcoal border-charcoal text-cream"
                       : "bg-white/60 border-sand/70 text-charcoal hover:bg-cream"
