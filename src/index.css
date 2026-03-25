@@ -2,12 +2,13 @@
 
 @layer base {
   /* Sticky header (nav only): offset in-page anchor scrolling */
+  /* Fallback trước khi Header đo chiều cao thật (ResizeObserver) */
   :root {
-    --header-offset: 6.5rem;
+    --header-offset: 8.75rem;
   }
   @media (min-width: 768px) {
     :root {
-      --header-offset: 7.5rem;
+      --header-offset: 7.75rem;
     }
   }
   html {

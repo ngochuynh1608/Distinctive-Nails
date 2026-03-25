@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useSite } from "../context/SiteContext";
 
 function PhoneIcon() {
@@ -76,6 +76,28 @@ export default function Header() {
   const bookingUrl = site.bookingUrl?.trim() || "#book";
   const [menuOpen, setMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const headerShellRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const el = headerShellRef.current;
+    if (!el) return;
+
+    function syncHeaderOffset() {
+      const h = Math.ceil(el.getBoundingClientRect().height);
+      document.documentElement.style.setProperty("--header-offset", `${h}px`);
+    }
+
+    syncHeaderOffset();
+    const ro = new ResizeObserver(syncHeaderOffset);
+    ro.observe(el);
+    window.addEventListener("resize", syncHeaderOffset, { passive: true });
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", syncHeaderOffset);
+      document.documentElement.style.removeProperty("--header-offset");
+    };
+  }, []);
 
   useEffect(() => {
     const onScroll = () => {
@@ -103,7 +125,10 @@ export default function Header() {
     .filter((it) => it.label.trim() && it.enabled !== false && it.href.trim());
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 px-4 md:px-8">
+    <header
+      ref={headerShellRef}
+      className="fixed top-0 left-0 right-0 z-50 px-4 md:px-8 pt-[env(safe-area-inset-top,0px)]"
+    >
       <div className="max-w-6xl mx-auto pt-3">
         <div
           className={`px-4 py-2 rounded-2xl bg-cream/95 backdrop-blur-sm transition-all duration-300 overflow-hidden ${
