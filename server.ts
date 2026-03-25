@@ -371,6 +371,17 @@ function isAddrInUse(err: unknown): boolean {
   );
 }
 
+/**
+ * HMR: chỉ bật khi dev (`bun run dev`). Tắt bằng DISABLE_BUN_HMR=1 hoặc NODE_ENV=production.
+ * Trên Bun cũ, NODE_ENV=production + serve HTML đôi khi bundle sai JSX (jsxDEV is not a function).
+ * Cách an toàn khi deploy: `DISABLE_BUN_HMR=1` mà không ép NODE_ENV (xem script `start`).
+ */
+const hmrEnabled =
+  process.env.DISABLE_BUN_HMR !== "1" && process.env.NODE_ENV !== "production";
+const devBundlerOpts = hmrEnabled
+  ? { development: { hmr: true as const, console: true as const } }
+  : {};
+
 const serveOptions = {
   routes: {
     "/": index,
@@ -446,10 +457,7 @@ const serveOptions = {
       return up ?? new Response("Not found", { status: 404 });
     },
   },
-  development: {
-    hmr: true,
-    console: true,
-  },
+  ...devBundlerOpts,
 };
 
 const portEnv = process.env.PORT?.trim();
