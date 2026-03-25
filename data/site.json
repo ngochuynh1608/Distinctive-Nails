@@ -9,7 +9,51 @@
     "email": "hello@bestnails.com",
     "address": "1915 State Road Unit D, Summerville, SC, United States, 29486",
     "footerTagline": "Luxury nail care in a friendly space.",
-    "bookingUrl": "https://bookingnail.com"
+    "bookingUrl": "https://bookingnail.com",
+    "menu": [
+      {
+        "key": "home",
+        "label": "Home",
+        "href": "#",
+        "enabled": true
+      },
+      {
+        "key": "about",
+        "label": "About Us",
+        "href": "#about-us",
+        "enabled": true
+      },
+      {
+        "key": "services",
+        "label": "Services",
+        "href": "#services",
+        "enabled": true
+      },
+      {
+        "key": "gallery",
+        "label": "Gallery",
+        "href": "#instagram",
+        "enabled": true
+      },
+      {
+        "key": "promotion",
+        "label": "Promotion",
+        "href": "#promotion",
+        "enabled": false
+      },
+      {
+        "key": "contact",
+        "label": "Contact Us",
+        "href": "#book",
+        "enabled": true
+      },
+      {
+        "key": "81284f6c-b30f-412a-a2ea-f6655772d857",
+        "label": "Gift Card",
+        "href": "http://amazone.com",
+        "enabled": true
+      }
+    ]
   },
   "hero": {
     "eyebrow": "Luxury meets comfort 2",
@@ -78,6 +122,28 @@
             "name": "Deluxe Pedicure",
             "price": "$45",
             "description": "Extended exfoliation, masque and massage for deeper relaxation."
+          }
+        ]
+      },
+      {
+        "name": "Nail Art",
+        "description": "",
+        "items": [
+          {
+            "name": "Design",
+            "price": "$20",
+            "description": ""
+          }
+        ]
+      },
+      {
+        "name": "Massage",
+        "description": "aaa",
+        "items": [
+          {
+            "name": "Head",
+            "price": "$50",
+            "description": "aaaa"
           }
         ]
       }

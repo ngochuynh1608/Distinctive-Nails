@@ -426,8 +426,21 @@ export default function AdminApp() {
       promotion: { ...promotion, ...patch },
     }));
   }
+
+  function defaultHeaderMenuItems() {
+    return [
+      { key: "home", label: "Home", href: "/", enabled: true },
+      { key: "about", label: "About Us", href: "#about-us", enabled: true },
+      { key: "services", label: "Services", href: "#services", enabled: true },
+      { key: "gallery", label: "Gallery", href: "#instagram", enabled: true },
+      { key: "promotion", label: "Promotion", href: "#promotion", enabled: !!promotion.enabled },
+      { key: "contact", label: "Contact Us", href: "#book", enabled: true },
+    ];
+  }
+
   const sectionTabs = [
     { id: "general", label: "Chung", icon: "🏢" },
+    { id: "menu", label: "Menu", icon: "🧭" },
     { id: "hero", label: "Hero", icon: "🖼️" },
     { id: "slides", label: "Slide", icon: "🎞️" },
     { id: "pricing", label: "Bảng giá", icon: "💲" },
@@ -581,6 +594,109 @@ export default function AdminApp() {
               onChange={(e) => setSite({ footerTagline: e.target.value })}
             />
           </Field>
+        </section>
+
+        <section
+          className={`rounded-2xl border border-sand/70 bg-white p-6 shadow-sm space-y-4 ${
+            activeSection === "menu" ? "block" : "hidden"
+          }`}
+        >
+          <h2 className="font-serif text-lg font-semibold border-b border-sand/60 pb-2">
+            Menu header (đổi tên/tắt-bật/thêm mục)
+          </h2>
+
+          {(() => {
+            const menuItems = Array.isArray(draft?.site?.menu)
+              ? draft.site.menu
+              : defaultHeaderMenuItems();
+
+            function setMenuItems(next) {
+              setSite({ menu: next });
+            }
+
+            function updateItem(itemIndex, patch) {
+              const next = [...menuItems];
+              next[itemIndex] = { ...next[itemIndex], ...patch };
+              setMenuItems(next);
+            }
+
+            function removeItem(itemIndex) {
+              const next = menuItems.filter((_, i) => i !== itemIndex);
+              setMenuItems(next);
+            }
+
+            function addItem() {
+              const newItem = {
+                key:
+                  (typeof crypto !== "undefined" && crypto?.randomUUID?.()) ||
+                  `menu-${Date.now()}`,
+                label: "New menu item",
+                href: "",
+                enabled: true,
+              };
+              setMenuItems([...menuItems, newItem]);
+            }
+
+            return (
+              <div className="space-y-4">
+                <p className="text-sm text-warm">
+                  Nhập link dạng anchor như <span className="font-mono">#services</span>, hoặc link ngoài.
+                </p>
+
+                <div className="space-y-3">
+                  {menuItems.map((item, itemIndex) => (
+                    <div
+                      key={item.key ?? itemIndex}
+                      className="rounded-xl border border-sand/60 p-4 space-y-3 relative bg-cream/20"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => removeItem(itemIndex)}
+                        className="absolute top-3 right-3 text-xs text-red-700 hover:underline cursor-pointer"
+                      >
+                        Xóa
+                      </button>
+
+                      <div className="flex flex-wrap items-center gap-4">
+                        <label className="inline-flex items-center gap-2 text-sm text-charcoal">
+                          <input
+                            type="checkbox"
+                            checked={item.enabled !== false}
+                            onChange={(e) => updateItem(itemIndex, { enabled: e.target.checked })}
+                          />
+                          Enabled
+                        </label>
+                      </div>
+
+                      <Field label={`Tên item menu (${itemIndex + 1})`}>
+                        <input
+                          className="w-full rounded-xl border border-sand px-4 py-2.5"
+                          value={item.label || ""}
+                          onChange={(e) => updateItem(itemIndex, { label: e.target.value })}
+                        />
+                      </Field>
+
+                      <Field label="Link (href)">
+                        <input
+                          className="w-full rounded-xl border border-sand px-4 py-2.5"
+                          value={item.href || ""}
+                          onChange={(e) => updateItem(itemIndex, { href: e.target.value })}
+                        />
+                      </Field>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={addItem}
+                  className="rounded-full border border-charcoal px-4 py-2 text-sm hover:bg-cream cursor-pointer"
+                >
+                  + Thêm mục menu
+                </button>
+              </div>
+            );
+          })()}
         </section>
 
         <section

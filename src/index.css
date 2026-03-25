@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 @layer base {
-  /* Fixed header (contact strip + nav): keep section titles visible on in-page links */
+  /* Sticky header (nav only): offset in-page anchor scrolling */
   :root {
-    --header-offset: 11rem;
+    --header-offset: 6.5rem;
   }
   @media (min-width: 768px) {
     :root {
-      --header-offset: 12.5rem;
+      --header-offset: 7.5rem;
     }
   }
   html {

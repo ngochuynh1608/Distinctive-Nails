@@ -30,7 +30,30 @@ function PublicLayout() {
   if (loading || !content) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-cream text-warm">
-        Đang tải nội dung…
+        <div className="flex flex-col items-center gap-3">
+          <svg
+            className="w-10 h-10 animate-spin text-warm/70"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+          >
+            <circle
+              cx="12"
+              cy="12"
+              r="9"
+              stroke="currentColor"
+              strokeWidth="3"
+              opacity="0.25"
+            />
+            <path
+              d="M21 12a9 9 0 0 0-9-9"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+            />
+          </svg>
+          <span className="sr-only">Loading</span>
+        </div>
       </div>
     );
   }

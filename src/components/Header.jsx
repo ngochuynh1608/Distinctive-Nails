@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSite } from "../context/SiteContext";
 
 function PhoneIcon() {
@@ -54,6 +54,17 @@ function CloseMenuIcon({ className = "w-[18px] h-[18px]" }) {
   );
 }
 
+function defaultMenuItems(promotionEnabled) {
+  return [
+    { key: "home", label: "Home", href: "/", enabled: true },
+    { key: "about", label: "About Us", href: "#about-us", enabled: true },
+    { key: "services", label: "Services", href: "#services", enabled: true },
+    { key: "gallery", label: "Gallery", href: "#instagram", enabled: true },
+    { key: "promotion", label: "Promotion", href: "#promotion", enabled: !!promotionEnabled },
+    { key: "contact", label: "Contact Us", href: "#book", enabled: true },
+  ];
+}
+
 export default function Header() {
   const { content } = useSite();
   const { site } = content;
@@ -64,110 +75,117 @@ export default function Header() {
   const email = site.email?.trim();
   const bookingUrl = site.bookingUrl?.trim() || "#book";
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const siteMenu = Array.isArray(site.menu) ? site.menu : null;
+  const menuItemsRaw = siteMenu?.length ? siteMenu : defaultMenuItems(promotion.enabled);
+  const menuItems = menuItemsRaw
+    .map((it) => ({
+      key: it?.key,
+      label: (it?.label ?? "").toString(),
+      href: (it?.href ?? "").toString().trim(),
+      enabled: it?.enabled ?? true,
+    }))
+    .map((it) =>
+      it.href === "#promotion"
+        ? { ...it, enabled: !!it.enabled && !!promotion.enabled }
+        : it,
+    )
+    .filter((it) => it.label.trim() && it.enabled !== false && it.href.trim());
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 pt-4 px-4 md:px-8">
-      <div className="max-w-6xl mx-auto mb-2 px-4 py-2 rounded-2xl bg-cream/95 backdrop-blur-sm">
-        <div className="flex flex-wrap items-center justify-center md:justify-between gap-x-4 gap-y-1 text-xs md:text-sm text-warm">
-          {phone ? (
-            phoneTel ? (
+    <header className="fixed top-0 left-0 right-0 z-50 px-4 md:px-8">
+      <div className="max-w-6xl mx-auto pt-3">
+        <div
+          className={`px-4 py-2 rounded-2xl bg-cream/95 backdrop-blur-sm transition-all duration-300 overflow-hidden ${
+            isScrolled ? "max-h-0 opacity-0 pointer-events-none" : "max-h-32 opacity-100"
+          }`}
+          aria-hidden={isScrolled}
+        >
+          <div className="flex flex-wrap items-center justify-center md:justify-between gap-x-4 gap-y-1 text-xs md:text-sm text-warm">
+            {phone ? (
+              phoneTel ? (
+                <a
+                  href={`tel:${phoneTel}`}
+                  className="inline-flex items-center gap-1.5 hover:text-charcoal transition-colors"
+                >
+                  <PhoneIcon />
+                  <span>{phone}</span>
+                </a>
+              ) : (
+                <span className="inline-flex items-center gap-1.5">
+                  <PhoneIcon />
+                  <span>{phone}</span>
+                </span>
+              )
+            ) : null}
+            {email ? (
               <a
-                href={`tel:${phoneTel}`}
+                href={`mailto:${email}`}
                 className="inline-flex items-center gap-1.5 hover:text-charcoal transition-colors"
               >
-                <PhoneIcon />
-                <span>{phone}</span>
+                <MailIcon />
+                <span>{email}</span>
               </a>
-            ) : (
-              <span className="inline-flex items-center gap-1.5">
-                <PhoneIcon />
-                <span>{phone}</span>
+            ) : null}
+            {site.address ? (
+              <span className="inline-flex items-center gap-1.5 text-center">
+                <MapPinIcon />
+                <span>{site.address}</span>
               </span>
-            )
-          ) : null}
-          {email ? (
-            <a
-              href={`mailto:${email}`}
-              className="inline-flex items-center gap-1.5 hover:text-charcoal transition-colors"
-            >
-              <MailIcon />
-              <span>{email}</span>
-            </a>
-          ) : null}
-          {site.address ? (
-            <span className="inline-flex items-center gap-1.5 text-center">
-              <MapPinIcon />
-              <span>{site.address}</span>
-            </span>
-          ) : null}
+            ) : null}
+          </div>
         </div>
-      </div>
-      <nav className="max-w-6xl mx-auto flex items-center justify-between py-3 px-5 rounded-2xl bg-cream/95 backdrop-blur-sm">
-        <a
-          href="#"
-          className="flex items-center gap-3 font-serif text-2xl font-semibold text-charcoal tracking-tight"
-        >
-          {logoUrl ? (
-            <img src={logoUrl} alt="" className="h-9 w-auto object-contain max-w-[140px]" />
-          ) : null}
-          <span>{site.brandName}</span>
-        </a>
-        <button
-          type="button"
-          className="md:hidden group inline-flex items-center justify-center w-11 h-11 rounded-full border border-charcoal/12 text-charcoal bg-white/95 shadow-[0_1px_2px_rgba(44,40,38,0.06)] hover:border-charcoal/22 hover:shadow-[0_4px_14px_rgba(44,40,38,0.1)] active:scale-[0.97] transition-all duration-300"
-          aria-label="Open menu"
-          onClick={() => setMenuOpen(true)}
-        >
-          <MenuIcon className="w-[22px] h-[22px] text-charcoal/90 group-hover:text-charcoal transition-colors duration-300" />
-        </button>
 
-        <div className="hidden md:flex items-center gap-3 md:gap-6 text-sm md:text-base">
+        <nav className="py-3 px-5 rounded-2xl bg-cream/95 backdrop-blur-sm flex items-center justify-between">
           <a
             href="#"
-            className="text-warm hover:text-charcoal transition-colors duration-200 whitespace-nowrap"
+            className="flex items-center gap-3 font-serif text-2xl font-semibold text-charcoal tracking-tight"
           >
-            Home
+            {logoUrl ? (
+              <img src={logoUrl} alt="" className="h-9 w-auto object-contain max-w-[140px]" />
+            ) : null}
+            <span>{site.brandName}</span>
           </a>
-          <a
-            href="#about-us"
-            className="text-warm hover:text-charcoal transition-colors duration-200 whitespace-nowrap"
-          >
-            About Us
-          </a>
-          <a
-            href="#services"
-            className="text-warm hover:text-charcoal transition-colors duration-200 whitespace-nowrap"
-          >
-            Services
-          </a>
-          <a
-            href="#instagram"
-            className="text-warm hover:text-charcoal transition-colors duration-200 whitespace-nowrap"
-          >
-            Gallary
-          </a>
-          {promotion.enabled ? (
+
+          <div className="hidden md:flex items-center gap-3 md:gap-6 text-sm md:text-base">
+            {menuItems.map((item, idx) => (
+              <a
+                key={item.key ?? idx}
+                href={item.href}
+                className="text-warm hover:text-charcoal transition-colors duration-200 whitespace-nowrap"
+              >
+                {item.label}
+              </a>
+            ))}
+
             <a
-              href="#promotion"
-              className="text-warm hover:text-charcoal transition-colors duration-200 whitespace-nowrap"
+              href={bookingUrl}
+              className="inline-flex items-center justify-center px-4 md:px-5 py-2 rounded-full bg-charcoal text-cream font-medium text-sm hover:bg-warm transition-colors duration-200 cursor-pointer whitespace-nowrap"
             >
-              Promotion
+              Booking Now
             </a>
-          ) : null}
-          <a
-            href={bookingUrl}
-            className="text-warm hover:text-charcoal transition-colors duration-200 whitespace-nowrap"
+          </div>
+
+          <button
+            type="button"
+            className="md:hidden group inline-flex items-center justify-center w-11 h-11 rounded-full border border-charcoal/12 text-charcoal bg-white/95 shadow-[0_1px_2px_rgba(44,40,38,0.06)] hover:border-charcoal/22 hover:shadow-[0_4px_14px_rgba(44,40,38,0.1)] active:scale-[0.97] transition-all duration-300"
+            aria-label="Open menu"
+            onClick={() => setMenuOpen(true)}
           >
-            Contact Us
-          </a>
-          <a
-            href={bookingUrl}
-            className="inline-flex items-center justify-center px-4 md:px-5 py-2 rounded-full bg-charcoal text-cream font-medium text-sm hover:bg-warm transition-colors duration-200 cursor-pointer whitespace-nowrap"
-          >
-            Booking Now
-          </a>
-        </div>
-      </nav>
+            <MenuIcon className="w-[22px] h-[22px] text-charcoal/90 group-hover:text-charcoal transition-colors duration-300" />
+          </button>
+        </nav>
+      </div>
 
       <div
         className={`md:hidden fixed inset-0 z-[70] transition-opacity duration-300 ${
@@ -200,14 +218,16 @@ export default function Header() {
             </div>
 
             <nav className="grid gap-2 text-[15px]">
-              <a href="#" className="px-3 py-2.5 rounded-xl hover:bg-white/70 text-charcoal" onClick={() => setMenuOpen(false)}>Home</a>
-              <a href="#about-us" className="px-3 py-2.5 rounded-xl hover:bg-white/70 text-charcoal" onClick={() => setMenuOpen(false)}>About Us</a>
-              <a href="#services" className="px-3 py-2.5 rounded-xl hover:bg-white/70 text-charcoal" onClick={() => setMenuOpen(false)}>Services</a>
-              <a href="#instagram" className="px-3 py-2.5 rounded-xl hover:bg-white/70 text-charcoal" onClick={() => setMenuOpen(false)}>Gallary</a>
-              {promotion.enabled ? (
-                <a href="#promotion" className="px-3 py-2.5 rounded-xl hover:bg-white/70 text-charcoal" onClick={() => setMenuOpen(false)}>Promotion</a>
-              ) : null}
-              <a href={bookingUrl} className="px-3 py-2.5 rounded-xl hover:bg-white/70 text-charcoal" onClick={() => setMenuOpen(false)}>Contact Us</a>
+              {menuItems.map((item, idx) => (
+                <a
+                  key={item.key ?? idx}
+                  href={item.href}
+                  className="px-3 py-2.5 rounded-xl hover:bg-white/70 text-charcoal"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  {item.label}
+                </a>
+              ))}
             </nav>
 
             <a
