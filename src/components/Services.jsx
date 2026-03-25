@@ -1,84 +1,18 @@
 import { useState } from "react";
 import { useSite } from "../context/SiteContext";
 
-function SparklesIcon({ className }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-        d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
-      />
-    </svg>
-  );
+/** Chuẩn hoá hiển thị: JSON cũ chỉ có service.items → một nhóm ẩn tên. */
+function getDisplayGroups(service) {
+  if (Array.isArray(service?.groups) && service.groups.length > 0) {
+    return service.groups.map((g) => ({
+      name: (g?.name ?? "").trim(),
+      description: (g?.description ?? "").trim(),
+      items: Array.isArray(g?.items) ? g.items : [],
+    }));
+  }
+  const items = Array.isArray(service?.items) ? service.items : [];
+  return [{ name: "", description: "", items }];
 }
-
-function HeartIcon({ className }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-        d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-      />
-    </svg>
-  );
-}
-
-function PaintBrushIcon({ className }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-        d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
-      />
-    </svg>
-  );
-}
-
-function ArrowRightIcon() {
-  return (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-        d="M17 8l4 4m0 0l-4 4m4-4H3"
-      />
-    </svg>
-  );
-}
-
-const services = [
-  {
-    title: "Manicure",
-    description: "Shape, buff, and polish with care. Gel or classic — your choice.",
-    linkText: "View Menu",
-    icon: SparklesIcon,
-    iconBg: "bg-rose/20 group-hover:bg-rose/30",
-    iconColor: "text-rose",
-  },
-  {
-    title: "Pedicure",
-    description: "Soak, exfoliate, and polish. A treat for your feet in a calm environment.",
-    linkText: "View Menu",
-    icon: HeartIcon,
-    iconBg: "bg-gold/20 group-hover:bg-gold/30",
-    iconColor: "text-gold",
-  },
-  {
-    title: "Nail art",
-    description: "Custom designs, French tips, gems — we bring your ideas to life.",
-    linkText: "View Menu",
-    icon: PaintBrushIcon,
-    iconBg: "bg-charcoal/10 group-hover:bg-charcoal/15",
-    iconColor: "text-charcoal",
-  },
-];
 
 export default function Services() {
   const { content } = useSite();
@@ -103,7 +37,7 @@ export default function Services() {
     Array.isArray(pricing?.services) && pricing.services[activeServiceIndex]
       ? pricing.services[activeServiceIndex]
       : null;
-  const activeItems = Array.isArray(activeService?.items) ? activeService.items : [];
+  const displayGroups = activeService ? getDisplayGroups(activeService) : [];
 
   return (
     <section id="services" className="py-20 md:py-28 px-4 md:px-8 bg-white">
@@ -116,9 +50,7 @@ export default function Services() {
         <div className="mt-10 rounded-2xl border border-sand/60 bg-cream/10 p-4 md:p-6">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex-1">
-              <p className="text-xs font-medium uppercase tracking-wide text-warm/90">
-                Choose service
-              </p>
+              <p className="text-xs font-medium uppercase tracking-wide text-warm/90">Choose service</p>
             </div>
           </div>
 
@@ -158,31 +90,46 @@ export default function Services() {
                   ) : null}
                 </div>
 
-                <div className="mt-6 divide-y divide-sand/70">
-                  {activeItems.length ? (
-                    activeItems.map((row, rowIndex) => (
-                      <div
-                        key={`${row?.name || "item"}-${rowIndex}`}
-                        className="ml-2 sm:ml-4 pl-4 sm:pl-5 pr-4 border-l-[3px] border-rose/30 bg-cream/55 rounded-r-lg py-3"
-                      >
-                        <div className="flex items-start justify-between gap-6">
-                          <h4 className="font-medium text-charcoal leading-7">
-                            {row?.name || `Item ${rowIndex + 1}`}
-                          </h4>
-                          {row?.price ? (
-                            <span className="text-lg font-semibold text-charcoal shrink-0 leading-7">
-                              {row.price}
-                            </span>
-                          ) : null}
-                        </div>
-                        {row?.description ? (
-                          <p className="text-warm text-sm leading-relaxed mt-2">{row.description}</p>
-                        ) : null}
+                <div className="mt-8 space-y-10">
+                  {displayGroups.map((group, gIdx) => (
+                    <div key={gIdx}>
+                      {group.name ? (
+                        <h4 className="font-serif text-xl font-semibold text-charcoal mb-1 border-b border-sand/60 pb-2">
+                          {group.name}
+                        </h4>
+                      ) : null}
+                      {group.description ? (
+                        <p className="text-warm text-sm leading-relaxed mb-4">{group.description}</p>
+                      ) : null}
+
+                      <div className="mt-4 space-y-3">
+                        {group.items.length ? (
+                          group.items.map((row, rowIndex) => (
+                            <div
+                              key={`${row?.name || "item"}-${gIdx}-${rowIndex}`}
+                              className="ml-2 sm:ml-4 pl-4 sm:pl-5 pr-4 border-l-[3px] border-rose/30 bg-cream/55 rounded-r-lg py-3"
+                            >
+                              <div className="flex items-start justify-between gap-6">
+                                <h5 className="font-medium text-charcoal leading-7">
+                                  {row?.name || `Item ${rowIndex + 1}`}
+                                </h5>
+                                {row?.price ? (
+                                  <span className="text-lg font-semibold text-charcoal shrink-0 leading-7">
+                                    {row.price}
+                                  </span>
+                                ) : null}
+                              </div>
+                              {row?.description ? (
+                                <p className="text-warm text-sm leading-relaxed mt-2">{row.description}</p>
+                              ) : null}
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-warm text-sm py-2">Chưa có mục giá trong nhóm này.</p>
+                        )}
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-warm text-sm py-6">Chưa có mục giá cho service này.</p>
-                  )}
+                    </div>
+                  ))}
                 </div>
               </>
             ) : (

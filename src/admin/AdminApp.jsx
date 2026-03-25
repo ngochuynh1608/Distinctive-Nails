@@ -12,11 +12,53 @@ const emptyPrice = () => ({
   description: "",
 });
 
-const emptyPriceService = () => ({
+const emptyPriceGroup = () => ({
   name: "",
   description: "",
   items: [emptyPrice()],
 });
+
+const emptyPriceService = () => ({
+  name: "",
+  description: "",
+  groups: [emptyPriceGroup()],
+});
+
+function normalizePricingData(p) {
+  let pricing = p;
+  if (!Array.isArray(p?.services)) {
+    const legacyItems = Array.isArray(p?.items) ? p.items : [];
+    pricing = {
+      ...p,
+      services: [
+        {
+          name: p?.modalTitle || "Service",
+          description: "",
+          items: legacyItems,
+        },
+      ],
+    };
+  }
+  const services = (pricing.services || []).map((svc) => {
+    if (Array.isArray(svc?.groups) && svc.groups.length > 0) {
+      return {
+        ...svc,
+        groups: svc.groups.map((g) => ({
+          name: g?.name ?? "",
+          description: g?.description ?? "",
+          items:
+            Array.isArray(g?.items) && g.items.length > 0 ? g.items : [emptyPrice()],
+        })),
+      };
+    }
+    const legacyItems = Array.isArray(svc?.items) && svc.items.length > 0 ? svc.items : [emptyPrice()];
+    return {
+      ...svc,
+      groups: [{ name: "", description: "", items: legacyItems }],
+    };
+  });
+  return { ...pricing, services };
+}
 
 async function uploadFile(file) {
   const fd = new FormData();
@@ -92,13 +134,20 @@ export default function AdminApp() {
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState("");
   const [activeSection, setActiveSection] = useState("general");
+  /** Bảng giá: true = thu gọn (admin) */
+  const [pricingSvcCollapsed, setPricingSvcCollapsed] = useState({});
+  const [pricingGrpCollapsed, setPricingGrpCollapsed] = useState({});
 
   const loadContent = useCallback(async () => {
     setLoadErr("");
     try {
       const r = await fetch("/api/content");
       if (!r.ok) throw new Error("Không tải được dữ liệu");
-      setDraft(await r.json());
+      const j = await r.json();
+      setDraft({
+        ...j,
+        pricing: normalizePricingData(j.pricing || {}),
+      });
     } catch (e) {
       setLoadErr(e.message ?? "Lỗi");
     }
@@ -195,21 +244,6 @@ export default function AdminApp() {
     }));
   }
 
-  function normalizePricing(p) {
-    if (Array.isArray(p?.services)) return p;
-    const legacyItems = Array.isArray(p?.items) ? p.items : [];
-    return {
-      ...p,
-      services: [
-        {
-          name: p?.modalTitle || "Service",
-          description: "",
-          items: legacyItems,
-        },
-      ],
-    };
-  }
-
   function setSlide(i, patch) {
     setDraft((d) => {
       const slides = [...d.slides];
@@ -228,7 +262,7 @@ export default function AdminApp() {
 
   function setPriceService(serviceIndex, patch) {
     setDraft((d) => {
-      const pricing = normalizePricing(d.pricing);
+      const pricing = normalizePricingData(d.pricing);
       const services = [...pricing.services];
       services[serviceIndex] = { ...services[serviceIndex], ...patch };
       return { ...d, pricing: { ...pricing, services } };
@@ -237,7 +271,7 @@ export default function AdminApp() {
 
   function addPriceService() {
     setDraft((d) => {
-      const pricing = normalizePricing(d.pricing);
+      const pricing = normalizePricingData(d.pricing);
       return {
         ...d,
         pricing: { ...pricing, services: [...pricing.services, emptyPriceService()] },
@@ -246,8 +280,28 @@ export default function AdminApp() {
   }
 
   function removePriceService(serviceIndex) {
+    setPricingSvcCollapsed((prev) => {
+      const next = {};
+      for (const k of Object.keys(prev)) {
+        const i = Number(k);
+        if (Number.isNaN(i)) continue;
+        if (i < serviceIndex) next[k] = prev[k];
+        else if (i > serviceIndex) next[String(i - 1)] = prev[k];
+      }
+      return next;
+    });
+    setPricingGrpCollapsed((prev) => {
+      const next = {};
+      for (const [key, v] of Object.entries(prev)) {
+        const [si, gi] = key.split("-").map(Number);
+        if (Number.isNaN(si) || Number.isNaN(gi)) continue;
+        if (si < serviceIndex) next[key] = v;
+        else if (si > serviceIndex) next[`${si - 1}-${gi}`] = v;
+      }
+      return next;
+    });
     setDraft((d) => {
-      const pricing = normalizePricing(d.pricing);
+      const pricing = normalizePricingData(d.pricing);
       return {
         ...d,
         pricing: {
@@ -258,35 +312,106 @@ export default function AdminApp() {
     });
   }
 
-  function setPriceItemByService(serviceIndex, itemIndex, patch) {
+  function setPriceGroup(serviceIndex, groupIndex, patch) {
     setDraft((d) => {
-      const pricing = normalizePricing(d.pricing);
+      const pricing = normalizePricingData(d.pricing);
       const services = [...pricing.services];
-      const items = [...(services[serviceIndex].items || [])];
+      const groups = [...(services[serviceIndex].groups || [])];
+      groups[groupIndex] = { ...groups[groupIndex], ...patch };
+      services[serviceIndex] = { ...services[serviceIndex], groups };
+      return { ...d, pricing: { ...pricing, services } };
+    });
+  }
+
+  function addPriceGroup(serviceIndex) {
+    setDraft((d) => {
+      const pricing = normalizePricingData(d.pricing);
+      const services = [...pricing.services];
+      const groups = [...(services[serviceIndex].groups || []), emptyPriceGroup()];
+      services[serviceIndex] = { ...services[serviceIndex], groups };
+      return { ...d, pricing: { ...pricing, services } };
+    });
+  }
+
+  function removePriceGroup(serviceIndex, groupIndex) {
+    setPricingGrpCollapsed((prev) => {
+      const next = {};
+      for (const [key, v] of Object.entries(prev)) {
+        const [si, gi] = key.split("-").map(Number);
+        if (Number.isNaN(si) || Number.isNaN(gi)) continue;
+        if (si !== serviceIndex) {
+          next[key] = v;
+          continue;
+        }
+        if (gi < groupIndex) next[key] = v;
+        else if (gi > groupIndex) next[`${si}-${gi - 1}`] = v;
+      }
+      return next;
+    });
+    setDraft((d) => {
+      const pricing = normalizePricingData(d.pricing);
+      const services = [...pricing.services];
+      const nextGroups = (services[serviceIndex].groups || []).filter((_, i) => i !== groupIndex);
+      services[serviceIndex] = {
+        ...services[serviceIndex],
+        groups: nextGroups.length > 0 ? nextGroups : [emptyPriceGroup()],
+      };
+      return { ...d, pricing: { ...pricing, services } };
+    });
+  }
+
+  function setPriceItemByGroup(serviceIndex, groupIndex, itemIndex, patch) {
+    setDraft((d) => {
+      const pricing = normalizePricingData(d.pricing);
+      const services = [...pricing.services];
+      const groups = [...(services[serviceIndex].groups || [])];
+      const items = [...(groups[groupIndex].items || [])];
       items[itemIndex] = { ...items[itemIndex], ...patch };
-      services[serviceIndex] = { ...services[serviceIndex], items };
+      groups[groupIndex] = { ...groups[groupIndex], items };
+      services[serviceIndex] = { ...services[serviceIndex], groups };
       return { ...d, pricing: { ...pricing, services } };
     });
   }
 
-  function addPriceItemToService(serviceIndex) {
+  function addPriceItemToGroup(serviceIndex, groupIndex) {
     setDraft((d) => {
-      const pricing = normalizePricing(d.pricing);
+      const pricing = normalizePricingData(d.pricing);
       const services = [...pricing.services];
-      const items = [...(services[serviceIndex].items || []), emptyPrice()];
-      services[serviceIndex] = { ...services[serviceIndex], items };
+      const groups = [...(services[serviceIndex].groups || [])];
+      const items = [...(groups[groupIndex].items || []), emptyPrice()];
+      groups[groupIndex] = { ...groups[groupIndex], items };
+      services[serviceIndex] = { ...services[serviceIndex], groups };
       return { ...d, pricing: { ...pricing, services } };
     });
   }
 
-  function removePriceItemFromService(serviceIndex, itemIndex) {
+  function removePriceItemFromGroup(serviceIndex, groupIndex, itemIndex) {
     setDraft((d) => {
-      const pricing = normalizePricing(d.pricing);
+      const pricing = normalizePricingData(d.pricing);
       const services = [...pricing.services];
-      const items = (services[serviceIndex].items || []).filter((_, i) => i !== itemIndex);
-      services[serviceIndex] = { ...services[serviceIndex], items };
+      const groups = [...(services[serviceIndex].groups || [])];
+      const items = (groups[groupIndex].items || []).filter((_, i) => i !== itemIndex);
+      groups[groupIndex] = {
+        ...groups[groupIndex],
+        items: items.length > 0 ? items : [emptyPrice()],
+      };
+      services[serviceIndex] = { ...services[serviceIndex], groups };
       return { ...d, pricing: { ...pricing, services } };
     });
+  }
+
+  function togglePricingServiceCollapse(i) {
+    setPricingSvcCollapsed((p) => ({ ...p, [i]: p[i] !== true }));
+  }
+  function togglePricingGroupCollapse(si, gi) {
+    const key = `${si}-${gi}`;
+    setPricingGrpCollapsed((p) => ({ ...p, [key]: p[key] !== true }));
+  }
+  function isPricingServiceExpanded(i) {
+    return pricingSvcCollapsed[i] !== true;
+  }
+  function isPricingGroupExpanded(si, gi) {
+    return pricingGrpCollapsed[`${si}-${gi}`] !== true;
   }
 
   if (!authChecked) {
@@ -349,7 +474,7 @@ export default function AdminApp() {
     );
   }
 
-  const pricing = normalizePricing(draft.pricing);
+  const pricing = normalizePricingData(draft.pricing);
   const instagram = {
     profileUrl: "",
     images: [],
@@ -878,91 +1003,241 @@ export default function AdminApp() {
             />
           </Field>
           <div className="space-y-4">
-            {pricing.services.map((service, serviceIndex) => (
-              <div key={serviceIndex} className="rounded-xl border border-sand/60 p-4 space-y-4 relative">
-                <button
-                  type="button"
-                  onClick={() => removePriceService(serviceIndex)}
-                  className="absolute top-2 right-2 text-sm text-red-700 hover:underline cursor-pointer"
+            {pricing.services.map((service, serviceIndex) => {
+              const svcOpen = isPricingServiceExpanded(serviceIndex);
+              const nGroups = (service.groups || []).length;
+              return (
+                <div
+                  key={serviceIndex}
+                  className="rounded-xl border border-sand/60 overflow-hidden relative bg-white"
                 >
-                  Xóa service
-                </button>
-                <Field label={`Service ${serviceIndex + 1} - Tên`}>
-                  <input
-                    className="w-full rounded-xl border border-sand px-4 py-2.5"
-                    value={service.name}
-                    onChange={(e) => setPriceService(serviceIndex, { name: e.target.value })}
-                  />
-                </Field>
-                <Field label="Mô tả service (tuỳ chọn)">
-                  <textarea
-                    className="w-full rounded-xl border border-sand px-4 py-2.5 min-h-[60px]"
-                    value={service.description || ""}
-                    onChange={(e) => setPriceService(serviceIndex, { description: e.target.value })}
-                  />
-                </Field>
-
-                <div className="mt-1 ml-2 sm:ml-4 pl-4 sm:pl-5 border-l-[3px] border-rose/35 rounded-r-lg bg-cream/60 py-4 pr-3 space-y-3">
-                  <p className="text-xs font-medium uppercase tracking-wide text-warm/90">
-                    Mục giá trong nhóm này
-                  </p>
-                  <div className="space-y-3">
-                    {(service.items || []).map((item, itemIndex) => (
-                      <div
-                        key={itemIndex}
-                        className="rounded-xl border border-sand/60 bg-white p-3 pl-4 space-y-2 relative shadow-sm"
+                  <div className="flex items-center gap-2 border-b border-sand/55 bg-cream/35 px-3 py-2.5 pr-24">
+                    <button
+                      type="button"
+                      onClick={() => togglePricingServiceCollapse(serviceIndex)}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-sand/80 bg-white text-charcoal hover:bg-cream transition-colors cursor-pointer"
+                      aria-expanded={svcOpen}
+                      aria-label={svcOpen ? "Thu gọn service" : "Mở rộng service"}
+                    >
+                      <span
+                        className={`inline-block text-[10px] leading-none transition-transform duration-200 ${
+                          svcOpen ? "rotate-90" : ""
+                        }`}
+                        aria-hidden
                       >
-                        <span className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-rose/25" aria-hidden />
-                        <button
-                          type="button"
-                          onClick={() => removePriceItemFromService(serviceIndex, itemIndex)}
-                          className="absolute top-2 right-2 text-xs text-red-700 hover:underline cursor-pointer"
-                        >
-                          Xóa item
-                        </button>
-                        <Field label={`Item ${itemIndex + 1} — Tên`}>
-                          <input
-                            className="w-full rounded-xl border border-sand px-4 py-2.5"
-                            value={item.name}
-                            onChange={(e) =>
-                              setPriceItemByService(serviceIndex, itemIndex, { name: e.target.value })
-                            }
-                          />
-                        </Field>
-                        <Field label="Giá">
-                          <input
-                            className="w-full rounded-xl border border-sand px-4 py-2.5"
-                            value={item.price}
-                            onChange={(e) =>
-                              setPriceItemByService(serviceIndex, itemIndex, { price: e.target.value })
-                            }
-                          />
-                        </Field>
-                        <Field label="Mô tả item (tuỳ chọn)">
-                          <textarea
-                            className="w-full rounded-xl border border-sand px-4 py-2.5 min-h-[60px]"
-                            value={item.description}
-                            onChange={(e) =>
-                              setPriceItemByService(serviceIndex, itemIndex, {
-                                description: e.target.value,
-                              })
-                            }
-                          />
-                        </Field>
-                      </div>
-                    ))}
+                        ▶
+                      </span>
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[11px] font-semibold uppercase tracking-wide text-warm">
+                        Service {serviceIndex + 1}
+                      </span>
+                      <p className="truncate text-sm font-medium text-charcoal">
+                        {service.name?.trim() || "Chưa đặt tên"}
+                      </p>
+                      <p className="text-xs text-warm/85">
+                        {nGroups} nhóm con
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removePriceService(serviceIndex)}
+                      className="absolute top-2 right-2 text-sm text-red-700 hover:underline cursor-pointer"
+                    >
+                      Xóa service
+                    </button>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => addPriceItemToService(serviceIndex)}
-                    className="rounded-full border border-charcoal/30 bg-white px-4 py-2 text-sm text-charcoal hover:bg-cream cursor-pointer"
-                  >
-                    + Thêm item trong nhóm
-                  </button>
+                  {svcOpen ? (
+                    <div className="space-y-4 p-4">
+                      <Field label={`Service ${serviceIndex + 1} - Tên`}>
+                        <input
+                          className="w-full rounded-xl border border-sand px-4 py-2.5"
+                          value={service.name}
+                          onChange={(e) => setPriceService(serviceIndex, { name: e.target.value })}
+                        />
+                      </Field>
+                      <Field label="Mô tả service (tuỳ chọn)">
+                        <textarea
+                          className="w-full rounded-xl border border-sand px-4 py-2.5 min-h-[60px]"
+                          value={service.description || ""}
+                          onChange={(e) =>
+                            setPriceService(serviceIndex, { description: e.target.value })
+                          }
+                        />
+                      </Field>
+
+                      <div className="mt-1 ml-2 sm:ml-4 space-y-4 rounded-r-lg border-l-[3px] border-rose/35 bg-cream/60 py-4 pl-4 sm:pl-5 pr-3">
+                        <p className="text-xs font-medium uppercase tracking-wide text-warm/90">
+                          Nhóm con (vd: MANICURE / PEDICURE) — mỗi nhóm có danh sách giá
+                        </p>
+                        {(service.groups || []).map((group, groupIndex) => {
+                          const grpOpen = isPricingGroupExpanded(serviceIndex, groupIndex);
+                          const nItems = (group.items || []).length;
+                          return (
+                            <div
+                              key={groupIndex}
+                              className={`relative rounded-xl border border-sand/55 border-l-[4px] border-l-rose/45 bg-white/90 shadow-sm ${
+                                groupIndex > 0
+                                  ? "border-t border-dashed border-sand/70 pt-5 mt-1"
+                                  : ""
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 border-b border-sand/45 px-3 py-2.5 pr-24">
+                                <button
+                                  type="button"
+                                  onClick={() => togglePricingGroupCollapse(serviceIndex, groupIndex)}
+                                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-sand/80 bg-cream/80 text-charcoal hover:bg-cream transition-colors cursor-pointer"
+                                  aria-expanded={grpOpen}
+                                  aria-label={grpOpen ? "Thu gọn nhóm" : "Mở rộng nhóm"}
+                                >
+                                  <span
+                                    className={`inline-block text-[10px] leading-none transition-transform duration-200 ${
+                                      grpOpen ? "rotate-90" : ""
+                                    }`}
+                                    aria-hidden
+                                  >
+                                    ▶
+                                  </span>
+                                </button>
+                                <div className="min-w-0 flex-1">
+                                  <span className="text-[11px] font-semibold uppercase tracking-wide text-charcoal/60">
+                                    Nhóm {groupIndex + 1}
+                                  </span>
+                                  <p className="truncate text-sm font-medium text-charcoal">
+                                    {group.name?.trim() || "Chưa đặt tên"}
+                                  </p>
+                                  <p className="text-xs text-warm/85">{nItems} dòng giá</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => removePriceGroup(serviceIndex, groupIndex)}
+                                  className="absolute top-2 right-2 text-xs text-red-700 hover:underline cursor-pointer"
+                                >
+                                  Xóa nhóm
+                                </button>
+                              </div>
+
+                              {grpOpen ? (
+                                <div className="space-y-3 p-4">
+                                  <div className="pr-2 sm:pr-12">
+                                    <Field label={`Nhóm ${groupIndex + 1} — Tên (vd: MANICURE)`}>
+                                      <input
+                                        className="w-full rounded-xl border border-sand px-4 py-2.5"
+                                        value={group.name || ""}
+                                        onChange={(e) =>
+                                          setPriceGroup(serviceIndex, groupIndex, {
+                                            name: e.target.value,
+                                          })
+                                        }
+                                      />
+                                    </Field>
+                                    <Field label="Mô tả nhóm (tuỳ chọn)">
+                                      <textarea
+                                        className="w-full rounded-xl border border-sand px-4 py-2.5 min-h-[48px]"
+                                        value={group.description || ""}
+                                        onChange={(e) =>
+                                          setPriceGroup(serviceIndex, groupIndex, {
+                                            description: e.target.value,
+                                          })
+                                        }
+                                      />
+                                    </Field>
+                                  </div>
+                                  <div className="border-t border-sand/65 pt-4 mt-1">
+                                    <p className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-charcoal/55">
+                                      Dòng giá trong nhóm
+                                    </p>
+                                    <div className="ml-1 space-y-3 border-l-[3px] border-charcoal/20 pl-4 sm:ml-2 sm:pl-5">
+                                      {(group.items || []).map((item, itemIndex) => (
+                                        <div
+                                          key={itemIndex}
+                                          className="relative rounded-lg border border-sand/65 bg-cream/50 py-3 pl-4 sm:pl-5 pr-3 space-y-2"
+                                        >
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              removePriceItemFromGroup(
+                                                serviceIndex,
+                                                groupIndex,
+                                                itemIndex
+                                              )
+                                            }
+                                            className="absolute top-2 right-2 text-xs text-red-700 hover:underline cursor-pointer"
+                                          >
+                                            Xóa item
+                                          </button>
+                                          <Field label={`Item ${itemIndex + 1} — Tên`}>
+                                            <input
+                                              className="w-full rounded-xl border border-sand px-4 py-2.5"
+                                              value={item.name}
+                                              onChange={(e) =>
+                                                setPriceItemByGroup(
+                                                  serviceIndex,
+                                                  groupIndex,
+                                                  itemIndex,
+                                                  { name: e.target.value }
+                                                )
+                                              }
+                                            />
+                                          </Field>
+                                          <Field label="Giá">
+                                            <input
+                                              className="w-full rounded-xl border border-sand px-4 py-2.5"
+                                              value={item.price}
+                                              onChange={(e) =>
+                                                setPriceItemByGroup(
+                                                  serviceIndex,
+                                                  groupIndex,
+                                                  itemIndex,
+                                                  { price: e.target.value }
+                                                )
+                                              }
+                                            />
+                                          </Field>
+                                          <Field label="Mô tả item (tuỳ chọn)">
+                                            <textarea
+                                              className="w-full rounded-xl border border-sand px-4 py-2.5 min-h-[60px]"
+                                              value={item.description}
+                                              onChange={(e) =>
+                                                setPriceItemByGroup(
+                                                  serviceIndex,
+                                                  groupIndex,
+                                                  itemIndex,
+                                                  { description: e.target.value }
+                                                )
+                                              }
+                                            />
+                                          </Field>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => addPriceItemToGroup(serviceIndex, groupIndex)}
+                                      className="mt-2 rounded-full border border-charcoal/30 bg-white px-4 py-2 text-sm text-charcoal hover:bg-cream cursor-pointer"
+                                    >
+                                      + Thêm item trong nhóm này
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                        <button
+                          type="button"
+                          onClick={() => addPriceGroup(serviceIndex)}
+                          className="rounded-full border border-charcoal px-4 py-2 text-sm hover:bg-cream cursor-pointer"
+                        >
+                          + Thêm nhóm con (MANICURE / PEDICURE…)
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <button
             type="button"
