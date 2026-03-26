@@ -43,6 +43,41 @@ function normalizeHero(h) {
   };
 }
 
+function normalizeInstagramData(instagram) {
+  const data = instagram || {};
+  const folders = Array.isArray(data.folders) ? data.folders : [];
+  const images = Array.isArray(data.images) ? data.images : [];
+  return {
+    ...data,
+    profileUrl: String(data.profileUrl ?? ""),
+    folders: folders.map((folder, idx) => ({
+      id: String(folder?.id ?? `folder-${idx + 1}`),
+      name: String(folder?.name ?? "").trim() || `Folder ${idx + 1}`,
+      designType: String(folder?.designType ?? "").trim(),
+      parentId: String(folder?.parentId ?? ""),
+    })),
+    images: images.map((img) => ({
+      imageUrl: String(img?.imageUrl ?? ""),
+      alt: String(img?.alt ?? ""),
+      folderId: String(img?.folderId ?? ""),
+    })),
+  };
+}
+
+function getFolderPath(folderId, folderMap) {
+  const visited = new Set();
+  const parts = [];
+  let currentId = folderId;
+  while (currentId && !visited.has(currentId)) {
+    visited.add(currentId);
+    const folder = folderMap.get(currentId);
+    if (!folder) break;
+    parts.unshift(folder.name);
+    currentId = folder.parentId || "";
+  }
+  return parts.join(" / ");
+}
+
 function normalizePricingData(p) {
   let pricing = p;
   if (!Array.isArray(p?.services)) {
@@ -156,6 +191,7 @@ export default function AdminApp() {
   /** Bảng giá: true = thu gọn (admin) */
   const [pricingSvcCollapsed, setPricingSvcCollapsed] = useState({});
   const [pricingGrpCollapsed, setPricingGrpCollapsed] = useState({});
+  const [instagramActiveFolderId, setInstagramActiveFolderId] = useState("all");
 
   const loadContent = useCallback(async () => {
     setLoadErr("");
@@ -166,6 +202,7 @@ export default function AdminApp() {
       setDraft({
         ...j,
         hero: normalizeHero(j.hero),
+        instagram: normalizeInstagramData(j.instagram),
         pricing: normalizePricingData(j.pricing || {}),
       });
     } catch (e) {
@@ -495,54 +532,86 @@ export default function AdminApp() {
   }
 
   const pricing = normalizePricingData(draft.pricing);
-  const instagram = {
-    profileUrl: "",
-    images: [],
-    ...(draft.instagram || {}),
-  };
-
-  function setInstagramImage(index, patch) {
-    setDraft((d) => {
-      const instagramData = {
-        profileUrl: "",
-        images: [],
-        ...(d.instagram || {}),
-      };
-      const images = [...(instagramData.images || [])];
-      images[index] = { ...images[index], ...patch };
-      return { ...d, instagram: { ...instagramData, images } };
-    });
-  }
-
-  function addInstagramImage() {
-    setDraft((d) => {
-      const instagramData = {
-        profileUrl: "",
-        images: [],
-        ...(d.instagram || {}),
-      };
-      return {
-        ...d,
-        instagram: {
-          ...instagramData,
-          images: [...(instagramData.images || []), { imageUrl: "", alt: "" }],
-        },
-      };
-    });
-  }
+  const instagram = normalizeInstagramData(draft.instagram);
+  const folderMap = new Map((instagram.folders || []).map((folder) => [folder.id, folder]));
+  const effectiveInstagramFolderId =
+    instagramActiveFolderId === "all" ||
+    (instagram.folders || []).some((folder) => folder.id === instagramActiveFolderId)
+      ? instagramActiveFolderId
+      : "all";
+  const instagramVisibleImages =
+    effectiveInstagramFolderId === "all"
+      ? (instagram.images || []).map((img, idx) => ({ ...img, _index: idx }))
+      : (instagram.images || [])
+          .map((img, idx) => ({ ...img, _index: idx }))
+          .filter((img) => (img?.folderId || "") === effectiveInstagramFolderId);
 
   function removeInstagramImage(index) {
     setDraft((d) => {
-      const instagramData = {
-        profileUrl: "",
-        images: [],
-        ...(d.instagram || {}),
-      };
+      const instagramData = normalizeInstagramData(d.instagram);
       return {
         ...d,
         instagram: {
           ...instagramData,
           images: (instagramData.images || []).filter((_, i) => i !== index),
+        },
+      };
+    });
+  }
+
+  function setInstagramFolder(index, patch) {
+    setDraft((d) => {
+      const instagramData = normalizeInstagramData(d.instagram);
+      const folders = [...(instagramData.folders || [])];
+      folders[index] = { ...folders[index], ...patch };
+      return { ...d, instagram: { ...instagramData, folders } };
+    });
+  }
+
+  function addInstagramFolder() {
+    setDraft((d) => {
+      const instagramData = normalizeInstagramData(d.instagram);
+      const id =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `folder-${Date.now()}`;
+      return {
+        ...d,
+        instagram: {
+          ...instagramData,
+          folders: [
+            ...(instagramData.folders || []),
+            {
+              id,
+              name: `New folder ${(instagramData.folders || []).length + 1}`,
+              designType: "",
+              parentId: "",
+            },
+          ],
+        },
+      };
+    });
+  }
+
+  function removeInstagramFolder(index) {
+    setDraft((d) => {
+      const instagramData = normalizeInstagramData(d.instagram);
+      const target = instagramData.folders[index];
+      const nextFolders = (instagramData.folders || []).filter((_, i) => i !== index);
+      const removedId = target?.id || "";
+      const sanitizeParent = (folder) => {
+        if (!removedId) return folder;
+        return folder.parentId === removedId ? { ...folder, parentId: "" } : folder;
+      };
+      const nextImages = (instagramData.images || []).map((img) =>
+        target && img.folderId === target.id ? { ...img, folderId: "" } : img,
+      );
+      return {
+        ...d,
+        instagram: {
+          ...instagramData,
+          folders: nextFolders.map(sanitizeParent),
+          images: nextImages,
         },
       };
     });
@@ -1422,82 +1491,182 @@ export default function AdminApp() {
             />
           </Field>
 
-          <Field label="Tải nhiều ảnh từ máy">
-            <FilePickerButton
-              id="upload-instagram-multiple"
-              label="Choose images"
-              multiple
-              onPick={async (files) => {
-                if (files.length === 0) return;
-                try {
-                  const uploaded = [];
-                  for (const file of files) {
-                    const url = await uploadFile(file);
-                    uploaded.push({
-                      imageUrl: url,
-                      alt: file.name?.replace(/\.[^/.]+$/, "") || "",
-                    });
-                  }
-                  setDraft((d) => {
-                    const instagramData = {
-                      profileUrl: "",
-                      images: [],
-                      ...(d.instagram || {}),
-                    };
-                    return {
-                      ...d,
-                      instagram: {
-                        ...instagramData,
-                        images: [...(instagramData.images || []), ...uploaded],
-                      },
-                    };
-                  });
-                } catch (err) {
-                  alert(err.message || "Upload Instagram images failed");
-                }
-              }}
-            />
-          </Field>
-
-          <div className="space-y-4">
-            {(instagram.images || []).map((img, index) => (
-              <div key={index} className="rounded-xl border border-sand/60 p-4 space-y-3 relative">
-                <button
-                  type="button"
-                  onClick={() => removeInstagramImage(index)}
-                  className="absolute top-2 right-2 text-sm text-red-700 hover:underline cursor-pointer"
-                >
-                  Xóa
-                </button>
-                <Field label={`Ảnh ${index + 1} - URL`}>
-                  <input
-                    className="w-full rounded-xl border border-sand px-4 py-2.5"
-                    value={img.imageUrl || ""}
-                    onChange={(e) => setInstagramImage(index, { imageUrl: e.target.value })}
-                  />
-                </Field>
-                <Field label="Alt text (tuỳ chọn)">
-                  <input
-                    className="w-full rounded-xl border border-sand px-4 py-2.5"
-                    value={img.alt || ""}
-                    onChange={(e) => setInstagramImage(index, { alt: e.target.value })}
-                  />
-                </Field>
-                <ImageThumb src={img.imageUrl} alt={img.alt || `Instagram image ${index + 1}`} />
+          <div className="rounded-xl border border-sand/60 p-4 space-y-3 bg-cream/30">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="font-medium text-charcoal">Folders (computer style: parent / child)</h3>
+              <button
+                type="button"
+                onClick={addInstagramFolder}
+                className="rounded-full border border-charcoal px-3.5 py-1.5 text-sm hover:bg-cream cursor-pointer"
+              >
+                + Create folder
+              </button>
+            </div>
+            {(instagram.folders || []).length > 0 ? (
+              <div className="space-y-3">
+                {(instagram.folders || []).map((folder, folderIndex) => (
+                  <div
+                    key={folder.id || folderIndex}
+                    className="rounded-lg border border-sand/60 bg-white p-3 relative grid md:grid-cols-3 gap-3"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => removeInstagramFolder(folderIndex)}
+                      className="absolute top-2 right-2 text-xs text-red-700 hover:underline cursor-pointer"
+                    >
+                      Xóa folder
+                    </button>
+                    <Field label="Folder name">
+                      <input
+                        className="w-full rounded-xl border border-sand px-4 py-2.5"
+                        value={folder.name || ""}
+                        onChange={(e) => setInstagramFolder(folderIndex, { name: e.target.value })}
+                      />
+                    </Field>
+                    <Field label="Parent folder">
+                      <select
+                        className="w-full rounded-xl border border-sand px-4 py-2.5 bg-white"
+                        value={folder.parentId || ""}
+                        onChange={(e) => setInstagramFolder(folderIndex, { parentId: e.target.value })}
+                      >
+                        <option value="">(root)</option>
+                        {(instagram.folders || [])
+                          .filter((it) => it.id !== folder.id)
+                          .map((it) => (
+                            <option key={it.id} value={it.id}>
+                              {getFolderPath(it.id, folderMap)}
+                            </option>
+                          ))}
+                      </select>
+                    </Field>
+                    <Field label="Design type">
+                      <input
+                        className="w-full rounded-xl border border-sand px-4 py-2.5"
+                        value={folder.designType || ""}
+                        onChange={(e) =>
+                          setInstagramFolder(folderIndex, { designType: e.target.value })
+                        }
+                        placeholder="e.g. Ombre, French, Cat Eye"
+                      />
+                    </Field>
+                  </div>
+                ))}
               </div>
-            ))}
+            ) : (
+              <p className="text-sm text-warm">
+                Chưa có folder. Tạo folder và chọn parent để có cấu trúc thư mục con giống máy tính.
+              </p>
+            )}
           </div>
 
-          <button
-            type="button"
-            onClick={addInstagramImage}
-            className="rounded-full border border-charcoal px-4 py-2 text-sm hover:bg-cream cursor-pointer"
-          >
-            + Thêm ảnh Instagram
-          </button>
+          <div className="rounded-xl border border-sand/60 p-4 bg-white space-y-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-warm/90">
+              Xem ảnh theo folder
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setInstagramActiveFolderId("all")}
+                className={`rounded-full border px-3.5 py-1.5 text-sm cursor-pointer ${
+                  effectiveInstagramFolderId === "all"
+                    ? "bg-charcoal border-charcoal text-cream"
+                    : "bg-cream/50 border-sand/70 text-charcoal hover:bg-cream"
+                }`}
+              >
+                All images ({(instagram.images || []).length})
+              </button>
+              {(instagram.folders || []).map((folder) => {
+                const id = folder.id || "";
+                const count = (instagram.images || []).filter((img) => (img?.folderId || "") === id).length;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setInstagramActiveFolderId(id)}
+                    className={`rounded-full border px-3.5 py-1.5 text-sm cursor-pointer ${
+                      effectiveInstagramFolderId === id
+                        ? "bg-charcoal border-charcoal text-cream"
+                        : "bg-cream/50 border-sand/70 text-charcoal hover:bg-cream"
+                    }`}
+                  >
+                    {folder.name || "Folder"} ({count})
+                  </button>
+                );
+              })}
+            </div>
+            <div className="pt-1">
+              <FilePickerButton
+                id="upload-instagram-by-folder"
+                label="Thêm nhiều ảnh vào folder đang chọn"
+                multiple
+                onPick={async (files) => {
+                  if (files.length === 0) return;
+                  if ((instagram.folders || []).length > 0 && effectiveInstagramFolderId === "all") {
+                    alert("Vui lòng chọn folder trước khi tải ảnh.");
+                    return;
+                  }
+                  const targetFolderId = effectiveInstagramFolderId === "all" ? "" : effectiveInstagramFolderId;
+                  try {
+                    const uploaded = [];
+                    for (const file of files) {
+                      const url = await uploadFile(file);
+                      uploaded.push({
+                        imageUrl: url,
+                        alt: file.name?.replace(/\.[^/.]+$/, "") || "",
+                        folderId: targetFolderId,
+                      });
+                    }
+                    setDraft((d) => {
+                      const instagramData = normalizeInstagramData(d.instagram);
+                      return {
+                        ...d,
+                        instagram: {
+                          ...instagramData,
+                          images: [...(instagramData.images || []), ...uploaded],
+                        },
+                      };
+                    });
+                  } catch (err) {
+                    alert(err.message || "Upload Instagram images failed");
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {instagramVisibleImages.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-sand/70 bg-cream/20 p-4 text-sm text-warm">
+                Folder này chưa có ảnh.
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-3">
+                {instagramVisibleImages.map((img, index) => (
+                  <div
+                    key={img._index ?? index}
+                    className="group relative overflow-hidden rounded-xl border border-sand/60 bg-cream/30 aspect-[4/5]"
+                  >
+                    <img
+                      src={img.imageUrl}
+                      alt={img.alt || `Instagram image ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeInstagramImage(img._index)}
+                      className="absolute top-2 right-2 rounded-full bg-white/90 border border-sand px-2 py-1 text-xs text-red-700 hover:bg-white cursor-pointer"
+                    >
+                      Xóa
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           <p className="text-sm text-warm">
-            Tải ảnh hoặc nhập URL ảnh, và đặt link Instagram. Bấm "Lưu tất cả" để hiển thị ngoài website.
+            Chọn folder rồi tải nhiều ảnh cùng lúc. Bấm "Lưu tất cả" để hiển thị ngoài website.
           </p>
         </section>
 

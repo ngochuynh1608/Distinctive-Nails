@@ -21,7 +21,7 @@ export default function InstagramGallery() {
   const { content } = useSite();
   const instagram = content.instagram || {};
   const profileUrl = instagram.profileUrl?.trim() || "https://instagram.com";
-  const posts = Array.isArray(instagram.images) ? instagram.images : [];
+  const posts = Array.isArray(instagram.images) ? instagram.images.slice(0, 6) : [];
 
   return (
     <section
@@ -54,28 +54,39 @@ export default function InstagramGallery() {
         </div>
 
         {posts.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 lg:gap-5">
-            {posts.map((post, idx) => (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 lg:gap-5">
+              {posts.map((post, idx) => (
+                <a
+                  key={`${post.imageUrl || "instagram"}-${idx}`}
+                  href={profileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="group relative block overflow-hidden rounded-2xl bg-sand/40 aspect-[4/5] cursor-pointer"
+                >
+                  <img
+                    src={post.imageUrl}
+                    alt={post.alt || `Instagram photo ${idx + 1}`}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-charcoal/60 via-charcoal/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-cream text-xs md:text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <span className="truncate">View on Instagram</span>
+                    <InstagramIcon />
+                  </div>
+                </a>
+              ))}
+            </div>
+
+            <div className="flex justify-center">
               <a
-                key={`${post.imageUrl || "instagram"}-${idx}`}
-                href={profileUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="group relative block overflow-hidden rounded-2xl bg-sand/40 aspect-[4/5] cursor-pointer"
+                href="/album"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-charcoal text-cream text-sm font-medium hover:bg-warm transition-colors duration-200 cursor-pointer"
               >
-                <img
-                  src={post.imageUrl}
-                  alt={post.alt || `Instagram photo ${idx + 1}`}
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-charcoal/60 via-charcoal/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-cream text-xs md:text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <span className="truncate">View on Instagram</span>
-                  <InstagramIcon />
-                </div>
+                <span>View all album</span>
               </a>
-            ))}
+            </div>
           </div>
         ) : (
           <div className="rounded-2xl border border-dashed border-sand/80 bg-white p-8 text-center text-warm text-sm">

@@ -386,6 +386,7 @@ const serveOptions = {
   routes: {
     "/": index,
     "/admin": index,
+    "/album": index,
     "/api/content": {
       GET: (req: Request) => handleApi(req),
       PUT: (req: Request) => handleApi(req),
