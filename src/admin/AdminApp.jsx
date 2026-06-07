@@ -808,6 +808,17 @@ export default function AdminApp() {
               onChange={(e) => setSite({ footerTagline: e.target.value })}
             />
           </Field>
+          <Field label="Google Ads (gtag.js)">
+            <textarea
+              className="w-full rounded-xl border border-sand px-4 py-2.5 min-h-[160px] font-mono text-xs"
+              value={draft.site.googleAdsScript || ""}
+              onChange={(e) => setSite({ googleAdsScript: e.target.value })}
+              placeholder={'<script async src="https://www.googletagmanager.com/gtag/js?id=AW-..."></script>\n<script>\n  window.dataLayer = window.dataLayer || [];\n  function gtag(){dataLayer.push(arguments);}\n  gtag(\'js\', new Date());\n  gtag(\'config\', \'AW-...\');\n</script>'}
+            />
+            <p className="mt-1.5 text-xs text-warm">
+              Dán mã đo lường Google Ads từ Google Tag Manager. Script sẽ được chèn vào trang công khai (không áp dụng cho trang admin).
+            </p>
+          </Field>
         </section>
 
         <section

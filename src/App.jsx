@@ -1,6 +1,7 @@
 import AdminApp from "./admin/AdminApp";
 import { SiteProvider, useSite } from "./context/SiteContext";
 import DocumentMeta from "./components/DocumentMeta";
+import TrackingScripts from "./components/TrackingScripts";
 import Header from "./components/Header";
 import Hero from "./components/Hero";
 import AboutUsSlider from "./components/AboutUsSlider";
@@ -62,6 +63,7 @@ function PublicLayout() {
   return (
     <>
       <DocumentMeta />
+      <TrackingScripts />
       <Header />
       <main className="pt-[var(--header-offset)]">
         <Hero />
@@ -110,6 +112,7 @@ function AlbumLayout() {
   return (
     <>
       <DocumentMeta />
+      <TrackingScripts />
       <Header />
       <AlbumPage />
       <Footer />
