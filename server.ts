@@ -1,7 +1,7 @@
 import { mkdir } from "node:fs/promises";
 
 const ROOT = import.meta.dir;
-const INDEX_HTML = `${ROOT}/index.html`;
+const INDEX_HTML_PATH = `${ROOT}/index.html`;
 const DATA_DIR = `${ROOT}/data`;
 const SITE_JSON = `${DATA_DIR}/site.json`;
 const UPLOAD_DIR = `${ROOT}/public/uploads`;
@@ -79,17 +79,34 @@ async function readGoogleAdsSnippet(): Promise<string> {
   }
 }
 
-async function serveAppHtml(includeTracking: boolean): Promise<Response> {
-  let html = await Bun.file(INDEX_HTML).text();
-  if (includeTracking) {
-    const snippet = await readGoogleAdsSnippet();
-    if (snippet) {
-      html = html.replace("</head>", `${snippet}\n</head>`);
-    }
+const GOOGLE_ADS_START = "<!-- google-ads-start -->";
+const GOOGLE_ADS_END = "<!-- google-ads-end -->";
+const GOOGLE_ADS_MARKER = "<!-- google-ads-inject -->";
+
+async function syncGoogleAdsToIndexHtml() {
+  const snippet = await readGoogleAdsSnippet();
+  let html = await Bun.file(INDEX_HTML_PATH).text();
+  if (!html.trim()) {
+    throw new Error("index.html is empty — restore the file before starting the server");
   }
-  return new Response(html, {
-    headers: { "Content-Type": "text/html; charset=utf-8" },
-  });
+
+  const blockPattern = new RegExp(
+    `\\n?${GOOGLE_ADS_START.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[\\s\\S]*?${GOOGLE_ADS_END.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\n?`,
+    "g",
+  );
+  html = html.replace(blockPattern, "\n");
+
+  if (snippet) {
+    if (!html.includes(GOOGLE_ADS_MARKER)) {
+      html = html.replace("</head>", `\n${GOOGLE_ADS_MARKER}\n</head>`);
+    }
+    html = html.replace(
+      GOOGLE_ADS_MARKER,
+      `${GOOGLE_ADS_START}\n${snippet}\n${GOOGLE_ADS_END}\n${GOOGLE_ADS_MARKER}`,
+    );
+  }
+
+  await Bun.write(INDEX_HTML_PATH, html);
 }
 
 function json(data: unknown, init: ResponseInit = {}) {
@@ -296,7 +313,8 @@ async function handleApi(req: Request): Promise<Response> {
     }
     try {
       await writeSite(body);
-      return json({ ok: true });
+      await syncGoogleAdsToIndexHtml();
+      return json({ ok: true, restartRequired: true });
     } catch {
       return json({ error: "Failed to save" }, { status: 500 });
     }
@@ -385,6 +403,8 @@ async function serveUpload(pathname: string): Promise<Response | null> {
 }
 
 await ensureDirs();
+await syncGoogleAdsToIndexHtml();
+const { default: index } = await import("./index.html");
 
 function isAddrInUse(err: unknown): boolean {
   return (
@@ -408,9 +428,9 @@ const devBundlerOpts = hmrEnabled
 
 const serveOptions = {
   routes: {
-    "/": () => serveAppHtml(true),
-    "/admin": () => serveAppHtml(false),
-    "/album": () => serveAppHtml(true),
+    "/": index,
+    "/admin": index,
+    "/album": index,
     "/api/content": {
       GET: (req: Request) => handleApi(req),
       PUT: (req: Request) => handleApi(req),
