@@ -32,3 +32,12 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Finder (MacOS) folder config
 .DS_Store
+
+# Runtime data + user uploads
+# - `server.ts` reads `data/site.json` -> keep the template file committed
+# - User uploads are written to `public/uploads/*` -> ignore uploaded files, but keep `.gitkeep`
+data/*
+!data/site.json
+
+public/uploads/*
+!public/uploads/.gitkeep

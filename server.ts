@@ -1,7 +1,7 @@
 import { mkdir } from "node:fs/promises";
-import index from "./index.html";
 
 const ROOT = import.meta.dir;
+const INDEX_HTML = `${ROOT}/index.html`;
 const DATA_DIR = `${ROOT}/data`;
 const SITE_JSON = `${DATA_DIR}/site.json`;
 const UPLOAD_DIR = `${ROOT}/public/uploads`;
@@ -66,6 +66,30 @@ async function readSite(): Promise<unknown> {
 
 async function writeSite(data: unknown) {
   await Bun.write(SITE_JSON, JSON.stringify(data, null, 2));
+}
+
+async function readGoogleAdsSnippet(): Promise<string> {
+  try {
+    const data = (await readSite()) as { site?: { googleAdsScript?: string } };
+    const raw = data.site?.googleAdsScript?.trim() ?? "";
+    if (!raw) return "";
+    return raw.replace(/<!--[\s\S]*?-->/g, "").trim();
+  } catch {
+    return "";
+  }
+}
+
+async function serveAppHtml(includeTracking: boolean): Promise<Response> {
+  let html = await Bun.file(INDEX_HTML).text();
+  if (includeTracking) {
+    const snippet = await readGoogleAdsSnippet();
+    if (snippet) {
+      html = html.replace("</head>", `${snippet}\n</head>`);
+    }
+  }
+  return new Response(html, {
+    headers: { "Content-Type": "text/html; charset=utf-8" },
+  });
 }
 
 function json(data: unknown, init: ResponseInit = {}) {
@@ -384,9 +408,9 @@ const devBundlerOpts = hmrEnabled
 
 const serveOptions = {
   routes: {
-    "/": index,
-    "/admin": index,
-    "/album": index,
+    "/": () => serveAppHtml(true),
+    "/admin": () => serveAppHtml(false),
+    "/album": () => serveAppHtml(true),
     "/api/content": {
       GET: (req: Request) => handleApi(req),
       PUT: (req: Request) => handleApi(req),
