@@ -60,6 +60,7 @@ function normalizeInstagramData(instagram) {
       imageUrl: String(img?.imageUrl ?? ""),
       alt: String(img?.alt ?? ""),
       folderId: String(img?.folderId ?? ""),
+      showOnHome: !!img?.showOnHome,
     })),
   };
 }
@@ -559,6 +560,16 @@ export default function AdminApp() {
     });
   }
 
+  function setInstagramImage(index, patch) {
+    setDraft((d) => {
+      const instagramData = normalizeInstagramData(d.instagram);
+      const images = [...(instagramData.images || [])];
+      if (!images[index]) return d;
+      images[index] = { ...images[index], ...patch };
+      return { ...d, instagram: { ...instagramData, images } };
+    });
+  }
+
   function setInstagramFolder(index, patch) {
     setDraft((d) => {
       const instagramData = normalizeInstagramData(d.instagram);
@@ -816,7 +827,7 @@ export default function AdminApp() {
               placeholder={'<script async src="https://www.googletagmanager.com/gtag/js?id=AW-..."></script>\n<script>\n  window.dataLayer = window.dataLayer || [];\n  function gtag(){dataLayer.push(arguments);}\n  gtag(\'js\', new Date());\n  gtag(\'config\', \'AW-...\');\n</script>'}
             />
             <p className="mt-1.5 text-xs text-warm">
-              Dán mã đo lường Google Ads. Script sẽ được chèn vào trang công khai (không áp dụng cho trang admin). Sau khi lưu, restart server để Google quét thấy thẻ trong HTML.
+              Dán mã đo lường Google Ads. Script chạy trên trang công khai (không áp dụng cho admin).
             </p>
           </Field>
           <Field label="Google Analytics (gtag.js)">
@@ -827,7 +838,7 @@ export default function AdminApp() {
               placeholder={'<script async src="https://www.googletagmanager.com/gtag/js?id=G-..."></script>\n<script>\n  window.dataLayer = window.dataLayer || [];\n  function gtag(){dataLayer.push(arguments);}\n  gtag(\'js\', new Date());\n  gtag(\'config\', \'G-...\');\n</script>'}
             />
             <p className="mt-1.5 text-xs text-warm">
-              Dán mã Google Analytics (GA4). Script sẽ được chèn vào trang công khai (không áp dụng cho trang admin). Sau khi lưu, restart server để Google quét thấy thẻ trong HTML.
+              Dán mã Google Analytics (GA4). Script chạy trên trang công khai (không áp dụng cho admin).
             </p>
           </Field>
         </section>
@@ -1636,6 +1647,7 @@ export default function AdminApp() {
                         imageUrl: url,
                         alt: file.name?.replace(/\.[^/.]+$/, "") || "",
                         folderId: targetFolderId,
+                        showOnHome: false,
                       });
                     }
                     setDraft((d) => {
@@ -1657,6 +1669,15 @@ export default function AdminApp() {
           </div>
 
           <div className="space-y-4">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-sm text-warm">
+                Đánh dấu ảnh để hiện ở trang chủ (Salon moments). Đã chọn:{" "}
+                <span className="font-medium text-charcoal">
+                  {(instagram.images || []).filter((img) => img.showOnHome).length}
+                </span>
+                {" "}/ 6 khuyến nghị
+              </p>
+            </div>
             {instagramVisibleImages.length === 0 ? (
               <div className="rounded-xl border border-dashed border-sand/70 bg-cream/20 p-4 text-sm text-warm">
                 Folder này chưa có ảnh.
@@ -1666,7 +1687,9 @@ export default function AdminApp() {
                 {instagramVisibleImages.map((img, index) => (
                   <div
                     key={img._index ?? index}
-                    className="group relative overflow-hidden rounded-xl border border-sand/60 bg-cream/30 aspect-[4/5]"
+                    className={`group relative overflow-hidden rounded-xl border bg-cream/30 aspect-[4/5] ${
+                      img.showOnHome ? "border-charcoal ring-2 ring-charcoal/20" : "border-sand/60"
+                    }`}
                   >
                     <img
                       src={img.imageUrl}
@@ -1674,6 +1697,16 @@ export default function AdminApp() {
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />
+                    <label className="absolute top-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-white/95 border border-sand px-2 py-1 text-xs text-charcoal cursor-pointer shadow-sm">
+                      <input
+                        type="checkbox"
+                        checked={!!img.showOnHome}
+                        onChange={(e) =>
+                          setInstagramImage(img._index, { showOnHome: e.target.checked })
+                        }
+                      />
+                      <span>Home</span>
+                    </label>
                     <button
                       type="button"
                       onClick={() => removeInstagramImage(img._index)}
@@ -1688,7 +1721,7 @@ export default function AdminApp() {
           </div>
 
           <p className="text-sm text-warm">
-            Chọn folder rồi tải nhiều ảnh cùng lúc. Bấm "Lưu tất cả" để hiển thị ngoài website.
+            Tick &quot;Home&quot; trên ảnh muốn hiện ở section Salon moments. Album (/album) vẫn hiện tất cả ảnh. Bấm &quot;Lưu tất cả&quot; để áp dụng.
           </p>
         </section>
 

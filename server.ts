@@ -122,30 +122,40 @@ const GOOGLE_ANALYTICS_START = "<!-- google-analytics-start -->";
 const GOOGLE_ANALYTICS_END = "<!-- google-analytics-end -->";
 const GOOGLE_ANALYTICS_MARKER = "<!-- google-analytics-inject -->";
 
-async function syncGoogleAdsToIndexHtml() {
-  const adsSnippet = await readTrackingSnippet("googleAdsScript");
-  const analyticsSnippet = await readTrackingSnippet("googleAnalyticsScript");
-  let html = await Bun.file(INDEX_HTML_PATH).text();
-  if (!html.trim()) {
-    throw new Error("index.html is empty — restore the file before starting the server");
+async function syncGoogleAdsToIndexHtml(): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const adsSnippet = await readTrackingSnippet("googleAdsScript");
+    const analyticsSnippet = await readTrackingSnippet("googleAnalyticsScript");
+    let html = await Bun.file(INDEX_HTML_PATH).text();
+    if (!html.trim()) {
+      console.warn("[tracking] index.html is empty — skip injecting tags into HTML");
+      return { ok: false, error: "index.html empty" };
+    }
+
+    html = applyTrackingBlock(
+      html,
+      GOOGLE_ADS_START,
+      GOOGLE_ADS_END,
+      GOOGLE_ADS_MARKER,
+      adsSnippet,
+    );
+    html = applyTrackingBlock(
+      html,
+      GOOGLE_ANALYTICS_START,
+      GOOGLE_ANALYTICS_END,
+      GOOGLE_ANALYTICS_MARKER,
+      analyticsSnippet,
+    );
+
+    await Bun.write(INDEX_HTML_PATH, html);
+    return { ok: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    // Production systemd user often cannot write index.html (EACCES).
+    // Do not crash the app — client DocumentMeta still injects tags at runtime.
+    console.warn(`[tracking] Could not write index.html (${message}). Tags will still load via client inject.`);
+    return { ok: false, error: message };
   }
-
-  html = applyTrackingBlock(
-    html,
-    GOOGLE_ADS_START,
-    GOOGLE_ADS_END,
-    GOOGLE_ADS_MARKER,
-    adsSnippet,
-  );
-  html = applyTrackingBlock(
-    html,
-    GOOGLE_ANALYTICS_START,
-    GOOGLE_ANALYTICS_END,
-    GOOGLE_ANALYTICS_MARKER,
-    analyticsSnippet,
-  );
-
-  await Bun.write(INDEX_HTML_PATH, html);
 }
 
 function json(data: unknown, init: ResponseInit = {}) {
@@ -352,8 +362,12 @@ async function handleApi(req: Request): Promise<Response> {
     }
     try {
       await writeSite(body);
-      await syncGoogleAdsToIndexHtml();
-      return json({ ok: true, restartRequired: true });
+      const sync = await syncGoogleAdsToIndexHtml();
+      return json({
+        ok: true,
+        trackingSyncedToHtml: sync.ok,
+        restartRequired: false,
+      });
     } catch {
       return json({ error: "Failed to save" }, { status: 500 });
     }

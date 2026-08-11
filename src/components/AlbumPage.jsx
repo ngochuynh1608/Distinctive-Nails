@@ -17,6 +17,7 @@ function normalizeInstagram(instagram) {
       imageUrl: (img?.imageUrl ?? "").toString(),
       alt: (img?.alt ?? "").toString(),
       folderId: (img?.folderId ?? "").toString(),
+      showOnHome: !!img?.showOnHome,
     })),
   };
 }

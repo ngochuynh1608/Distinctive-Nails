@@ -21,7 +21,10 @@ export default function InstagramGallery() {
   const { content } = useSite();
   const instagram = content.instagram || {};
   const profileUrl = instagram.profileUrl?.trim() || "https://instagram.com";
-  const posts = Array.isArray(instagram.images) ? instagram.images.slice(0, 6) : [];
+  const allImages = Array.isArray(instagram.images) ? instagram.images : [];
+  const selected = allImages.filter((img) => img?.showOnHome && img?.imageUrl);
+  // Nếu chưa chọn ảnh Home nào → fallback 6 ảnh đầu (tương thích dữ liệu cũ)
+  const posts = (selected.length > 0 ? selected : allImages).slice(0, 6);
 
   return (
     <section
