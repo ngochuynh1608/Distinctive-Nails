@@ -68,10 +68,19 @@ async function writeSite(data: unknown) {
   await Bun.write(SITE_JSON, JSON.stringify(data, null, 2));
 }
 
-async function readGoogleAdsSnippet(): Promise<string> {
+type SiteTrackingFields = {
+  site?: {
+    googleAdsScript?: string;
+    googleAnalyticsScript?: string;
+  };
+};
+
+async function readTrackingSnippet(
+  field: "googleAdsScript" | "googleAnalyticsScript",
+): Promise<string> {
   try {
-    const data = (await readSite()) as { site?: { googleAdsScript?: string } };
-    const raw = data.site?.googleAdsScript?.trim() ?? "";
+    const data = (await readSite()) as SiteTrackingFields;
+    const raw = data.site?.[field]?.trim() ?? "";
     if (!raw) return "";
     return raw.replace(/<!--[\s\S]*?-->/g, "").trim();
   } catch {
@@ -79,32 +88,62 @@ async function readGoogleAdsSnippet(): Promise<string> {
   }
 }
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function applyTrackingBlock(
+  html: string,
+  start: string,
+  end: string,
+  marker: string,
+  snippet: string,
+): string {
+  const blockPattern = new RegExp(
+    `\\n?${escapeRegExp(start)}[\\s\\S]*?${escapeRegExp(end)}\\n?`,
+    "g",
+  );
+  let next = html.replace(blockPattern, "\n");
+
+  if (snippet) {
+    if (!next.includes(marker)) {
+      next = next.replace("</head>", `\n${marker}\n</head>`);
+    }
+    next = next.replace(marker, `${start}\n${snippet}\n${end}\n${marker}`);
+  }
+
+  return next;
+}
+
 const GOOGLE_ADS_START = "<!-- google-ads-start -->";
 const GOOGLE_ADS_END = "<!-- google-ads-end -->";
 const GOOGLE_ADS_MARKER = "<!-- google-ads-inject -->";
+const GOOGLE_ANALYTICS_START = "<!-- google-analytics-start -->";
+const GOOGLE_ANALYTICS_END = "<!-- google-analytics-end -->";
+const GOOGLE_ANALYTICS_MARKER = "<!-- google-analytics-inject -->";
 
 async function syncGoogleAdsToIndexHtml() {
-  const snippet = await readGoogleAdsSnippet();
+  const adsSnippet = await readTrackingSnippet("googleAdsScript");
+  const analyticsSnippet = await readTrackingSnippet("googleAnalyticsScript");
   let html = await Bun.file(INDEX_HTML_PATH).text();
   if (!html.trim()) {
     throw new Error("index.html is empty — restore the file before starting the server");
   }
 
-  const blockPattern = new RegExp(
-    `\\n?${GOOGLE_ADS_START.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[\\s\\S]*?${GOOGLE_ADS_END.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\n?`,
-    "g",
+  html = applyTrackingBlock(
+    html,
+    GOOGLE_ADS_START,
+    GOOGLE_ADS_END,
+    GOOGLE_ADS_MARKER,
+    adsSnippet,
   );
-  html = html.replace(blockPattern, "\n");
-
-  if (snippet) {
-    if (!html.includes(GOOGLE_ADS_MARKER)) {
-      html = html.replace("</head>", `\n${GOOGLE_ADS_MARKER}\n</head>`);
-    }
-    html = html.replace(
-      GOOGLE_ADS_MARKER,
-      `${GOOGLE_ADS_START}\n${snippet}\n${GOOGLE_ADS_END}\n${GOOGLE_ADS_MARKER}`,
-    );
-  }
+  html = applyTrackingBlock(
+    html,
+    GOOGLE_ANALYTICS_START,
+    GOOGLE_ANALYTICS_END,
+    GOOGLE_ANALYTICS_MARKER,
+    analyticsSnippet,
+  );
 
   await Bun.write(INDEX_HTML_PATH, html);
 }

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useSite } from "../context/SiteContext";
 
-function injectScripts(html) {
+function injectScripts(html, trackingKey) {
   const container = document.createElement("div");
   container.innerHTML = html.trim();
   const injected = [];
@@ -11,6 +11,7 @@ function injectScripts(html) {
     for (const attr of oldScript.attributes) {
       script.setAttribute(attr.name, attr.value);
     }
+    script.setAttribute("data-bn-tracking", trackingKey);
     if (oldScript.textContent) {
       script.textContent = oldScript.textContent;
     }
@@ -21,9 +22,28 @@ function injectScripts(html) {
   return injected;
 }
 
+function useTrackingScripts(scriptHtml, trackingKey, headMarker) {
+  useEffect(() => {
+    if (!scriptHtml) return undefined;
+    if (document.querySelector(`script[data-bn-tracking="${trackingKey}"]`)) {
+      return undefined;
+    }
+    const headHtml = document.head?.innerHTML || "";
+    if (headMarker && headHtml.includes(headMarker)) {
+      return undefined;
+    }
+
+    const injected = injectScripts(scriptHtml, trackingKey);
+    return () => {
+      injected.forEach((node) => node.remove());
+    };
+  }, [scriptHtml, trackingKey, headMarker]);
+}
+
 export default function DocumentMeta() {
   const { content } = useSite();
-  const scriptHtml = content?.site?.googleAdsScript?.trim() || "";
+  const adsScript = content?.site?.googleAdsScript?.trim() || "";
+  const analyticsScript = content?.site?.googleAnalyticsScript?.trim() || "";
 
   useEffect(() => {
     if (!content?.site) return;
@@ -32,16 +52,8 @@ export default function DocumentMeta() {
     if (meta) meta.setAttribute("content", content.site.description);
   }, [content]);
 
-  useEffect(() => {
-    if (!scriptHtml) return undefined;
-    if (document.querySelector('script[src*="googletagmanager.com/gtag/js"]')) {
-      return undefined;
-    }
-    const injected = injectScripts(scriptHtml);
-    return () => {
-      injected.forEach((node) => node.remove());
-    };
-  }, [scriptHtml]);
+  useTrackingScripts(adsScript, "google-ads", "google-ads-start");
+  useTrackingScripts(analyticsScript, "google-analytics", "google-analytics-start");
 
   return null;
 }

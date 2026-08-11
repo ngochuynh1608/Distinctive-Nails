@@ -816,7 +816,18 @@ export default function AdminApp() {
               placeholder={'<script async src="https://www.googletagmanager.com/gtag/js?id=AW-..."></script>\n<script>\n  window.dataLayer = window.dataLayer || [];\n  function gtag(){dataLayer.push(arguments);}\n  gtag(\'js\', new Date());\n  gtag(\'config\', \'AW-...\');\n</script>'}
             />
             <p className="mt-1.5 text-xs text-warm">
-              Dán mã đo lường Google Ads từ Google Tag Manager. Script sẽ được chèn vào trang công khai (không áp dụng cho trang admin).
+              Dán mã đo lường Google Ads. Script sẽ được chèn vào trang công khai (không áp dụng cho trang admin). Sau khi lưu, restart server để Google quét thấy thẻ trong HTML.
+            </p>
+          </Field>
+          <Field label="Google Analytics (gtag.js)">
+            <textarea
+              className="w-full rounded-xl border border-sand px-4 py-2.5 min-h-[160px] font-mono text-xs"
+              value={draft.site.googleAnalyticsScript || ""}
+              onChange={(e) => setSite({ googleAnalyticsScript: e.target.value })}
+              placeholder={'<script async src="https://www.googletagmanager.com/gtag/js?id=G-..."></script>\n<script>\n  window.dataLayer = window.dataLayer || [];\n  function gtag(){dataLayer.push(arguments);}\n  gtag(\'js\', new Date());\n  gtag(\'config\', \'G-...\');\n</script>'}
+            />
+            <p className="mt-1.5 text-xs text-warm">
+              Dán mã Google Analytics (GA4). Script sẽ được chèn vào trang công khai (không áp dụng cho trang admin). Sau khi lưu, restart server để Google quét thấy thẻ trong HTML.
             </p>
           </Field>
         </section>
